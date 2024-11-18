@@ -1,4 +1,8 @@
 use clap::{Parser, Subcommand};
+use std::{
+    env, fs,
+    path::{Path, PathBuf},
+};
 
 /// CLI for COSMIC Desktop configuration management
 #[derive(Parser)]
@@ -34,10 +38,10 @@ enum Commands {
         version: u32,
         /// The component to configure (e.g., 'com.system76.CosmicComp').
         #[arg(short, long)]
-        component: Option<String>,
+        component: String,
         /// The specific configuration entry to modify (e.g., 'autotile').
         #[arg(short, long)]
-        entry: Option<String>,
+        entry: String,
     },
     /// Delete a configuration entry.
     #[command(disable_version_flag = true)]
@@ -64,30 +68,53 @@ fn main() {
             entry,
             value,
         } => {
-            println!(
-                "Component: {}, Version: {}, Entry: {}, Value: {}",
-                component, version, entry, value
-            )
+            let path = get_config_path(component, version, entry);
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(path, value).unwrap();
+            println!("Configuration entry written successfully.");
         }
         Commands::Read {
             version,
             component,
             entry,
         } => {
-            println!(
-                "Component: {:?}, Version: {}, Entry: {:?}",
-                component, version, entry
-            )
+            let path = get_config_path(component, version, entry);
+            if path.exists() {
+                let contents = fs::read_to_string(path).unwrap();
+                println!("{}", contents);
+            } else {
+                eprintln!("Configuration entry does not exist.");
+            }
         }
         Commands::Delete {
             version,
             component,
             entry,
         } => {
-            println!(
-                "Component: {}, Version: {}, Entry: {}",
-                component, version, entry
-            )
+            let path = get_config_path(component, version, entry);
+            if path.exists() {
+                fs::remove_file(path).unwrap();
+                println!("Configuration entry deleted successfully.");
+            } else {
+                println!("Configuration entry does not exist.");
+            }
         }
     }
+}
+
+fn get_config_path(component: &str, version: &u32, entry: &str) -> PathBuf {
+    let config_home = get_config_home();
+
+    Path::new(&config_home)
+        .join("cosmic")
+        .join(component)
+        .join(format!("v{}", version))
+        .join(entry)
+}
+
+fn get_config_home() -> String {
+    env::var("XDG_CONFIG_HOME").unwrap_or_else(|_| {
+        let home = env::var("HOME").unwrap();
+        format!("{}/.config", home)
+    })
 }

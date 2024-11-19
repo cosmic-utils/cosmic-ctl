@@ -10,3 +10,4 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.5.21", features = ["derive"] }
+unescaper = "0.1.5"

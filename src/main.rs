@@ -3,6 +3,7 @@ use std::{
     env, fs,
     path::{Path, PathBuf},
 };
+use unescaper::unescape;
 
 /// CLI for COSMIC Desktop configuration management
 #[derive(Parser)]
@@ -18,7 +19,7 @@ enum Commands {
     /// Write a configuration entry.
     #[command(disable_version_flag = true)]
     Write {
-        /// Configuration version to use.
+        /// The configuration version of the component.
         #[arg(short, long, default_value_t = 1)]
         version: u32,
         /// The component to configure (e.g., 'com.system76.CosmicComp').
@@ -27,13 +28,13 @@ enum Commands {
         /// The specific configuration entry to modify (e.g., 'autotile').
         #[arg(short, long)]
         entry: String,
-        /// The value to assign to the configuration entry.
+        /// The value to assign to the configuration entry. (e.g., 'true')
         value: String,
     },
     /// Read a configuration entry.
     #[command(disable_version_flag = true)]
     Read {
-        /// Configuration version to use.
+        /// The configuration version of the component.
         #[arg(short, long, default_value_t = 1)]
         version: u32,
         /// The component to configure (e.g., 'com.system76.CosmicComp').
@@ -46,7 +47,7 @@ enum Commands {
     /// Delete a configuration entry.
     #[command(disable_version_flag = true)]
     Delete {
-        /// Configuration version to use.
+        /// The configuration version of the component.
         #[arg(short, long, default_value_t = 1)]
         version: u32,
         /// The component to configure (e.g., 'com.system76.CosmicComp').
@@ -69,8 +70,10 @@ fn main() {
             value,
         } => {
             let path = get_config_path(component, version, entry);
+            let unescaped_value = unescape(value).unwrap();
+
             fs::create_dir_all(path.parent().unwrap()).unwrap();
-            fs::write(path, value).unwrap();
+            fs::write(path, unescaped_value).unwrap();
             println!("Configuration entry written successfully.");
         }
         Commands::Read {
@@ -79,6 +82,7 @@ fn main() {
             entry,
         } => {
             let path = get_config_path(component, version, entry);
+
             if path.exists() {
                 let contents = fs::read_to_string(path).unwrap();
                 println!("{}", contents);
@@ -92,6 +96,7 @@ fn main() {
             entry,
         } => {
             let path = get_config_path(component, version, entry);
+
             if path.exists() {
                 fs::remove_file(path).unwrap();
                 println!("Configuration entry deleted successfully.");

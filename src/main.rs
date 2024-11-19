@@ -1,5 +1,7 @@
 use clap::{Parser, Subcommand};
+use serde::Deserialize;
 use std::{
+    collections::HashMap,
     env, fs,
     path::{Path, PathBuf},
 };
@@ -57,6 +59,23 @@ enum Commands {
         #[arg(short, long)]
         entry: String,
     },
+    /// Write configurations from a JSON file
+    Apply {
+        /// Path to the JSON file containing configuration entries.
+        file: PathBuf,
+    },
+}
+
+#[derive(Deserialize)]
+struct Entry {
+    component: String,
+    version: u32,
+    entries: HashMap<String, String>,
+}
+
+#[derive(Deserialize)]
+struct ConfigFile {
+    configurations: Vec<Entry>,
 }
 
 fn main() {
@@ -69,11 +88,7 @@ fn main() {
             entry,
             value,
         } => {
-            let path = get_config_path(component, version, entry);
-            let unescaped_value = unescape(value).unwrap();
-
-            fs::create_dir_all(path.parent().unwrap()).unwrap();
-            fs::write(path, unescaped_value).unwrap();
+            apply_configuration(component, version, entry, value);
             println!("Configuration entry written successfully.");
         }
         Commands::Read {
@@ -87,7 +102,7 @@ fn main() {
                 let contents = fs::read_to_string(path).unwrap();
                 println!("{}", contents);
             } else {
-                eprintln!("Configuration entry does not exist.");
+                eprintln!("Error: Configuration entry does not exist.");
             }
         }
         Commands::Delete {
@@ -101,10 +116,36 @@ fn main() {
                 fs::remove_file(path).unwrap();
                 println!("Configuration entry deleted successfully.");
             } else {
-                println!("Configuration entry does not exist.");
+                eprintln!("Error: Configuration entry does not exist.");
             }
         }
+        Commands::Apply { file } => {
+            if file.extension().and_then(|s| s.to_str()) != Some("json") {
+                eprintln!("Error: The file is not in JSON format.");
+                return;
+            }
+
+            let file_content = fs::read_to_string(file).expect("Unable to read file");
+            let config_file: ConfigFile =
+                serde_json::from_str(&file_content).expect("Invalid JSON format");
+
+            for entry in config_file.configurations {
+                for (key, value) in entry.entries {
+                    apply_configuration(&entry.component, &entry.version, &key, &value);
+                }
+            }
+
+            println!("Configurations applied successfully.");
+        }
     }
+}
+
+fn apply_configuration(component: &str, version: &u32, entry: &str, value: &str) {
+    let path = get_config_path(component, version, entry);
+    let unescaped_value = unescape(value).unwrap();
+
+    fs::create_dir_all(path.parent().unwrap()).unwrap();
+    fs::write(path, unescaped_value).unwrap();
 }
 
 fn get_config_path(component: &str, version: &u32, entry: &str) -> PathBuf {

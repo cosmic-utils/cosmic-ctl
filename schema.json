@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "configurations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "component": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer"
+          },
+          "entries": {
+            "type": "object",
+            "patternProperties": {
+              "^[a-zA-Z0-9_-]+$": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "component",
+          "version",
+          "entries"
+        ]
+      }
+    }
+  },
+  "required": [
+    "configurations"
+  ]
+}

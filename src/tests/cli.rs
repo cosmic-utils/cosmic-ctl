@@ -223,3 +223,129 @@ fn test_backup_command() {
     assert!(backup_content.get("configurations").is_some());
     assert!(backup_content.get("$schema").is_some());
 }
+
+#[test]
+fn test_reset_command() {
+    let temp_dir = TempDir::new().unwrap();
+    let config_home = temp_dir.path().to_str().unwrap();
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args([
+            "write",
+            "--version",
+            VERSION,
+            "--component",
+            COMPONENT,
+            "--entry",
+            ENTRY,
+            VALUE,
+        ])
+        .assert()
+        .success();
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args([
+            "write",
+            "--version",
+            VERSION,
+            "--component",
+            COMPONENT,
+            "--entry",
+            "autotile_behavior",
+            "PerWorkspace",
+        ])
+        .assert()
+        .success();
+
+    let autotile_path = temp_dir
+        .path()
+        .join("cosmic")
+        .join("com.system76.CosmicComp")
+        .join("v1")
+        .join("autotile");
+    let autotile_behavior_path = temp_dir
+        .path()
+        .join("cosmic")
+        .join("com.system76.CosmicComp")
+        .join("v1")
+        .join("autotile_behavior");
+
+    assert!(autotile_path.exists());
+    assert!(autotile_behavior_path.exists());
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args(["reset", "--force"])
+        .assert()
+        .success()
+        .stdout("Successfully deleted 2 configuration entries.\n");
+
+    assert!(!autotile_path.exists());
+    assert!(!autotile_behavior_path.exists());
+    assert!(autotile_path.parent().unwrap().exists());
+    assert!(autotile_behavior_path.parent().unwrap().exists())
+}
+
+#[test]
+fn test_reset_command_verbose() {
+    let temp_dir = TempDir::new().unwrap();
+    let config_home = temp_dir.path().to_str().unwrap();
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args([
+            "write",
+            "--version",
+            VERSION,
+            "--component",
+            COMPONENT,
+            "--entry",
+            ENTRY,
+            VALUE,
+        ])
+        .assert()
+        .success();
+
+    let config_path = temp_dir
+        .path()
+        .join("cosmic")
+        .join(COMPONENT)
+        .join(format!("v{}", VERSION))
+        .join(ENTRY);
+
+    assert!(config_path.exists());
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args(["reset", "--force", "--verbose"])
+        .assert()
+        .success()
+        .stdout(format!(
+            "Deleting: {}\nSuccessfully deleted 1 configuration entries.\n",
+            config_path.display()
+        ));
+
+    assert!(!config_path.exists());
+    assert!(config_path.parent().unwrap().exists());
+}
+
+#[test]
+fn test_reset_command_empty_config() {
+    let temp_dir = TempDir::new().unwrap();
+    let config_home = temp_dir.path().to_str().unwrap();
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args(["reset", "--force"])
+        .assert()
+        .success()
+        .stdout("Successfully deleted 0 configuration entries.\n");
+}

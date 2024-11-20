@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     env, fs,
+    io::Write,
     path::{Path, PathBuf},
 };
 use unescaper::unescape;
@@ -34,7 +35,7 @@ enum Commands {
         /// The specific configuration entry to modify (e.g., 'autotile').
         #[arg(short, long)]
         entry: String,
-        /// The value to assign to the configuration entry. (e.g., 'true')
+        /// The value to assign to the configuration entry. (e.g., 'true').
         value: String,
     },
     /// Read a configuration entry.
@@ -67,6 +68,7 @@ enum Commands {
     Apply {
         /// Path to the JSON file containing configuration entries.
         file: PathBuf,
+        /// Print verbose output about skipped entries.
         #[arg(short, long)]
         verbose: bool,
     },
@@ -74,6 +76,15 @@ enum Commands {
     Backup {
         /// Path to the output JSON file.
         file: PathBuf,
+    },
+    /// Delete all configuration entries
+    Reset {
+        /// Skip confirmation prompt
+        #[arg(short, long)]
+        force: bool,
+        /// Show which entries are being deleted
+        #[arg(short, long)]
+        verbose: bool,
     },
 }
 
@@ -177,6 +188,38 @@ fn main() {
             fs::write(file, json_data).expect("Unable to write backup file");
             println!("Backup completed successfully.");
         }
+        Commands::Reset { force, verbose } => {
+            if !*force {
+                print!("Are you sure you want to delete all configuration entries? This action cannot be undone. [y/N] ");
+                std::io::stdout().flush().unwrap();
+
+                let mut response = String::new();
+                std::io::stdin().read_line(&mut response).unwrap();
+
+                if !response.trim().eq_ignore_ascii_case("y") {
+                    println!("Operation cancelled.");
+                    return;
+                }
+            }
+
+            let (deleted_count, errors) = delete_all_configurations(*verbose);
+
+            if errors.is_empty() {
+                println!(
+                    "Successfully deleted {} configuration entries.",
+                    deleted_count
+                );
+            } else {
+                println!(
+                    "Deleted {} configuration entries with {} errors:",
+                    deleted_count,
+                    errors.len()
+                );
+                for error in errors {
+                    eprintln!("Error: {}", error);
+                }
+            }
+        }
     }
 }
 
@@ -232,6 +275,34 @@ fn create_backup() -> ConfigFile {
             })
             .collect(),
     }
+}
+
+fn delete_all_configurations(verbose: bool) -> (usize, Vec<String>) {
+    let cosmic_path = get_cosmic_configs();
+    let mut deleted_count = 0;
+    let mut errors = Vec::new();
+
+    if !cosmic_path.exists() {
+        return (0, errors);
+    }
+
+    for entry in WalkDir::new(&cosmic_path)
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.path().is_file())
+    {
+        if verbose {
+            println!("Deleting: {}", entry.path().display());
+        }
+
+        if let Err(e) = fs::remove_file(entry.path()) {
+            errors.push(format!("{}: {}", entry.path().display(), e));
+        } else {
+            deleted_count += 1;
+        }
+    }
+
+    (deleted_count, errors)
 }
 
 fn parse_path(path: &Path) -> Option<(String, u32, String)> {

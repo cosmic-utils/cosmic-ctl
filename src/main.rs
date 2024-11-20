@@ -81,6 +81,8 @@ struct Entry {
 
 #[derive(Deserialize, Serialize)]
 struct ConfigFile {
+    #[serde(rename = "$schema")]
+    schema: String,
     configurations: Vec<Entry>,
 }
 
@@ -180,6 +182,7 @@ fn create_backup() -> ConfigFile {
     }
 
     ConfigFile {
+        schema: "https://raw.githubusercontent.com/HeitorAugustoLN/cosmic-ctl/refs/heads/main/schema.json".to_string(),
         configurations: configurations
             .into_iter()
             .map(|((component, version), entries)| Entry {

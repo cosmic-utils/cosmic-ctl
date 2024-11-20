@@ -160,7 +160,7 @@ fn test_apply_command() {
         .arg(config_file)
         .assert()
         .success()
-        .stdout("Configurations applied successfully.\n");
+        .stdout("Configurations applied successfully. 2 changes made, 0 entries skipped.\n");
 
     let autotile_path = temp_dir
         .path()

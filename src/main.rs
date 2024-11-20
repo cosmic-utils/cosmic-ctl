@@ -67,6 +67,8 @@ enum Commands {
     Apply {
         /// Path to the JSON file containing configuration entries.
         file: PathBuf,
+        #[arg(short, long)]
+        verbose: bool,
     },
     /// Backup all configuration entries to a JSON file.
     Backup {
@@ -99,8 +101,11 @@ fn main() {
             entry,
             value,
         } => {
-            apply_configuration(component, version, entry, value);
-            println!("Configuration entry written successfully.");
+            if !apply_configuration(component, version, entry, value) {
+                println!("Doing nothing, entry already has this value.");
+            } else {
+                println!("Configuration entry written successfully.");
+            }
         }
         Commands::Read {
             version,
@@ -130,7 +135,7 @@ fn main() {
                 eprintln!("Error: Configuration entry does not exist.");
             }
         }
-        Commands::Apply { file } => {
+        Commands::Apply { file, verbose } => {
             if file.extension().and_then(|s| s.to_str()) != Some("json") {
                 eprintln!("Error: The file is not in JSON format.");
                 return;
@@ -140,13 +145,29 @@ fn main() {
             let config_file: ConfigFile =
                 serde_json::from_str(&file_content).expect("Invalid JSON format");
 
+            let mut changes = 0;
+            let mut skipped = 0;
+
             for entry in config_file.configurations {
                 for (key, value) in entry.entries {
-                    apply_configuration(&entry.component, &entry.version, &key, &value);
+                    if !apply_configuration(&entry.component, &entry.version, &key, &value) {
+                        if *verbose {
+                            println!(
+                                "Skipping {}/v{}/{} - value unchanged",
+                                entry.component, entry.version, key
+                            );
+                        }
+                        skipped += 1;
+                    } else {
+                        changes += 1;
+                    }
                 }
             }
 
-            println!("Configurations applied successfully.");
+            println!(
+                "Configurations applied successfully. {} changes made, {} entries skipped.",
+                changes, skipped
+            );
         }
         Commands::Backup { file } => {
             let backup_data = create_backup();
@@ -159,12 +180,28 @@ fn main() {
     }
 }
 
-fn apply_configuration(component: &str, version: &u32, entry: &str, value: &str) {
+fn check_existing_value(path: &Path, new_value: &str) -> bool {
+    if path.exists() {
+        if let Ok(current_value) = fs::read_to_string(path) {
+            return current_value == new_value;
+        }
+    }
+
+    false
+}
+
+fn apply_configuration(component: &str, version: &u32, entry: &str, value: &str) -> bool {
     let path = get_config_path(component, version, entry);
     let unescaped_value = unescape(value).unwrap();
 
+    if check_existing_value(&path, &unescaped_value) {
+        return false;
+    }
+
     fs::create_dir_all(path.parent().unwrap()).unwrap();
     fs::write(path, unescaped_value).unwrap();
+
+    true
 }
 
 fn create_backup() -> ConfigFile {

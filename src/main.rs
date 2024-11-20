@@ -163,7 +163,7 @@ fn apply_configuration(component: &str, version: &u32, entry: &str, value: &str)
 }
 
 fn create_backup() -> ConfigFile {
-    let cosmic_path = get_config_home();
+    let cosmic_path = get_cosmic_configs();
     let mut configurations: HashMap<(String, u32), HashMap<String, String>> = HashMap::new();
 
     for entry in WalkDir::new(cosmic_path).into_iter().filter_map(|e| e.ok()) {
@@ -207,13 +207,18 @@ fn parse_path(path: &Path) -> Option<(String, u32, String)> {
 }
 
 fn get_config_path(component: &str, version: &u32, entry: &str) -> PathBuf {
-    let config_home = get_config_home();
+    let cosmic_folder = get_cosmic_configs();
 
-    Path::new(&config_home)
-        .join("cosmic")
+    Path::new(&cosmic_folder)
         .join(component)
         .join(format!("v{}", version))
         .join(entry)
+}
+
+fn get_cosmic_configs() -> PathBuf {
+    let config_home = get_config_home();
+
+    Path::new(&config_home).join("cosmic")
 }
 
 fn get_config_home() -> String {

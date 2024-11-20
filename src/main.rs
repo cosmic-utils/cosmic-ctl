@@ -76,13 +76,16 @@ enum Commands {
     Backup {
         /// Path to the output JSON file.
         file: PathBuf,
+        /// Show which entries are being backed up.
+        #[arg(short, long)]
+        verbose: bool,
     },
-    /// Delete all configuration entries
+    /// Delete all configuration entries.
     Reset {
-        /// Skip confirmation prompt
+        /// Skip confirmation prompt.
         #[arg(short, long)]
         force: bool,
-        /// Show which entries are being deleted
+        /// Show which entries are being deleted.
         #[arg(short, long)]
         verbose: bool,
     },
@@ -180,13 +183,16 @@ fn main() {
                 changes, skipped
             );
         }
-        Commands::Backup { file } => {
-            let backup_data = create_backup();
+        Commands::Backup { file, verbose } => {
+            let (backup_data, entry_count) = create_backup(*verbose);
             let json_data = serde_json::to_string_pretty(&backup_data)
                 .expect("Failed to serialize backup data");
 
             fs::write(file, json_data).expect("Unable to write backup file");
-            println!("Backup completed successfully.");
+            println!(
+                "Backup completed successfully. {} entries backed up.",
+                entry_count
+            );
         }
         Commands::Reset { force, verbose } => {
             if !*force {
@@ -247,24 +253,31 @@ fn apply_configuration(component: &str, version: &u32, entry: &str, value: &str)
     true
 }
 
-fn create_backup() -> ConfigFile {
+fn create_backup(verbose: bool) -> (ConfigFile, usize) {
     let cosmic_path = get_cosmic_configs();
     let mut configurations: HashMap<(String, u32), HashMap<String, String>> = HashMap::new();
+    let mut entry_count = 0;
 
     for entry in WalkDir::new(cosmic_path).into_iter().filter_map(|e| e.ok()) {
         if entry.path().is_file() {
             if let Some((component, version, entry_name)) = parse_path(entry.path()) {
+                if verbose {
+                    println!("Backing up: {}/v{}/{}", component, version, entry_name);
+                }
+
                 let content = fs::read_to_string(entry.path()).unwrap();
 
                 configurations
                     .entry((component.clone(), version))
                     .or_insert_with(HashMap::new)
                     .insert(entry_name, content);
+
+                entry_count += 1;
             }
         }
     }
 
-    ConfigFile {
+    (ConfigFile {
         schema: "https://raw.githubusercontent.com/HeitorAugustoLN/cosmic-ctl/refs/heads/main/schema.json".to_string(),
         configurations: configurations
             .into_iter()
@@ -274,7 +287,7 @@ fn create_backup() -> ConfigFile {
                 entries,
             })
             .collect(),
-    }
+    }, entry_count)
 }
 
 fn delete_all_configurations(verbose: bool) -> (usize, Vec<String>) {

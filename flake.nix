@@ -1,5 +1,5 @@
 {
-  description = "CLI program for writing and reading configuration entries in COSMIC Desktop";
+  description = "CLI for COSMIC Desktop configuration management";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -22,6 +22,12 @@
     {
       devShells = forAllSystems (pkgs: {
         default = import ./shell.nix { inherit pkgs; };
+      });
+
+      formatter = forAllSystems (pkgs: pkgs.treefmt);
+
+      packages = forAllSystems (pkgs: {
+        default = pkgs.callPackage ./. { };
       });
     };
 }

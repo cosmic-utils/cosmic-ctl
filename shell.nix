@@ -7,6 +7,7 @@ pkgs.mkShell {
 
   nativeBuildInputs = with pkgs; [
     cargo
+    nixfmt-rfc-style
     rustc
     rustfmt
   ];

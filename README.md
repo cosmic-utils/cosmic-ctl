@@ -61,4 +61,4 @@ cosmic-ctl backup /path/to/output/json/file
 
 # LICENSE
 
-This project is licensed under the `GPL-3.0-or-later` license. See the [LICENSE](LICENSE) for details.
+This project is licensed under the `GPL-3.0-only` license. See the [LICENSE](LICENSE) for details.

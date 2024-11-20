@@ -22,7 +22,7 @@ rustPlatform.buildRustPackage {
   meta = {
     description = "CLI for COSMIC Desktop configuration management";
     homepage = "https://github.com/HeitorAugustoLN/cosmic-ctl";
-    license = lib.licenses.gpl3Plus;
+    license = lib.licenses.gpl3Only;
     maintainers = with lib.maintainers; [ HeitorAugustoLN ];
     mainProgram = "cosmic-ctl";
   };

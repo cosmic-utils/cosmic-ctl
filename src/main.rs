@@ -1,11 +1,12 @@
 use clap::{Parser, Subcommand};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     env, fs,
     path::{Path, PathBuf},
 };
 use unescaper::unescape;
+use walkdir::WalkDir;
 
 /// CLI for COSMIC Desktop configuration management
 #[derive(Parser)]
@@ -59,21 +60,26 @@ enum Commands {
         #[arg(short, long)]
         entry: String,
     },
-    /// Write configurations from a JSON file
+    /// Write configurations from a JSON file.
     Apply {
         /// Path to the JSON file containing configuration entries.
         file: PathBuf,
     },
+    /// Backup all configuration entries to a JSON file.
+    Backup {
+        /// Path to the output JSON file.
+        file: PathBuf,
+    },
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 struct Entry {
     component: String,
     version: u32,
     entries: HashMap<String, String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 struct ConfigFile {
     configurations: Vec<Entry>,
 }
@@ -137,6 +143,14 @@ fn main() {
 
             println!("Configurations applied successfully.");
         }
+        Commands::Backup { file } => {
+            let backup_data = create_backup();
+            let json_data = serde_json::to_string_pretty(&backup_data)
+                .expect("Failed to serialize backup data");
+
+            fs::write(file, json_data).expect("Unable to write backup file");
+            println!("Backup completed successfully.");
+        }
     }
 }
 
@@ -146,6 +160,50 @@ fn apply_configuration(component: &str, version: &u32, entry: &str, value: &str)
 
     fs::create_dir_all(path.parent().unwrap()).unwrap();
     fs::write(path, unescaped_value).unwrap();
+}
+
+fn create_backup() -> ConfigFile {
+    let cosmic_path = get_config_home();
+    let mut configurations: HashMap<(String, u32), HashMap<String, String>> = HashMap::new();
+
+    for entry in WalkDir::new(cosmic_path).into_iter().filter_map(|e| e.ok()) {
+        if entry.path().is_file() {
+            if let Some((component, version, entry_name)) = parse_path(entry.path()) {
+                let content = fs::read_to_string(entry.path()).unwrap();
+
+                configurations
+                    .entry((component.clone(), version))
+                    .or_insert_with(HashMap::new)
+                    .insert(entry_name, content);
+            }
+        }
+    }
+
+    ConfigFile {
+        configurations: configurations
+            .into_iter()
+            .map(|((component, version), entries)| Entry {
+                component,
+                version,
+                entries,
+            })
+            .collect(),
+    }
+}
+
+fn parse_path(path: &Path) -> Option<(String, u32, String)> {
+    let parts: Vec<_> = path.iter().collect();
+
+    if parts.len() < 4 {
+        return None;
+    }
+
+    let entry_name = parts.last()?.to_str()?.to_string();
+    let version_str = parts.get(parts.len() - 2)?.to_str()?;
+    let version = version_str.strip_prefix('v')?.parse().ok()?;
+    let component = parts.get(parts.len() - 3)?.to_str()?.to_string();
+
+    Some((component, version, entry_name))
 }
 
 fn get_config_path(component: &str, version: &u32, entry: &str) -> PathBuf {

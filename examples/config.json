@@ -13,7 +13,7 @@
       "component": "com.system76.CosmicSettings",
       "version": 1,
       "entries": {
-        "active-page": "time-date"
+        "active-page": "\"time-date\""
       }
     }
   ]

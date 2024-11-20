@@ -1,6 +1,7 @@
 {
   lib,
   rustPlatform,
+  versionCheckHook,
 }:
 
 rustPlatform.buildRustPackage {
@@ -13,6 +14,10 @@ rustPlatform.buildRustPackage {
   };
 
   cargoHash = "sha256-ppCRFlO6cOTEpOoJsaVfMskhJU3b8fM5JWqkTAlT66w=";
+
+  doInstallCheck = true;
+  nativeInstallCheckInputs = [ versionCheckHook ];
+  versionCheckProgram = "${placeholder "out"}/bin/cosmic-ctl";
 
   meta = {
     description = "CLI for COSMIC Desktop configuration management";

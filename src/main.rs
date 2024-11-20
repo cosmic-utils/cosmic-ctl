@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod tests;
+
 use clap::{Parser, Subcommand};
 use serde::{Deserialize, Serialize};
 use std::{

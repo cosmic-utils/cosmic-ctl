@@ -28,7 +28,7 @@ enum Commands {
     Write {
         /// The configuration version of the component.
         #[arg(short, long, default_value_t = 1)]
-        version: u32,
+        version: u64,
         /// The component to configure (e.g., 'com.system76.CosmicComp').
         #[arg(short, long)]
         component: String,
@@ -43,7 +43,7 @@ enum Commands {
     Read {
         /// The configuration version of the component.
         #[arg(short, long, default_value_t = 1)]
-        version: u32,
+        version: u64,
         /// The component to configure (e.g., 'com.system76.CosmicComp').
         #[arg(short, long)]
         component: String,
@@ -56,7 +56,7 @@ enum Commands {
     Delete {
         /// The configuration version of the component.
         #[arg(short, long, default_value_t = 1)]
-        version: u32,
+        version: u64,
         /// The component to configure (e.g., 'com.system76.CosmicComp').
         #[arg(short, long)]
         component: String,
@@ -94,7 +94,7 @@ enum Commands {
 #[derive(Deserialize, Serialize)]
 struct Entry {
     component: String,
-    version: u32,
+    version: u64,
     entries: HashMap<String, String>,
 }
 
@@ -239,7 +239,7 @@ fn check_existing_value(path: &Path, new_value: &str) -> bool {
     false
 }
 
-fn apply_configuration(component: &str, version: &u32, entry: &str, value: &str) -> bool {
+fn apply_configuration(component: &str, version: &u64, entry: &str, value: &str) -> bool {
     let path = get_config_path(component, version, entry);
     let unescaped_value = unescape(value).unwrap();
 
@@ -255,7 +255,7 @@ fn apply_configuration(component: &str, version: &u32, entry: &str, value: &str)
 
 fn create_backup(verbose: bool) -> (ConfigFile, usize) {
     let cosmic_path = get_cosmic_configs();
-    let mut configurations: HashMap<(String, u32), HashMap<String, String>> = HashMap::new();
+    let mut configurations: HashMap<(String, u64), HashMap<String, String>> = HashMap::new();
     let mut entry_count = 0;
 
     for entry in WalkDir::new(cosmic_path).into_iter().filter_map(|e| e.ok()) {
@@ -318,7 +318,7 @@ fn delete_all_configurations(verbose: bool) -> (usize, Vec<String>) {
     (deleted_count, errors)
 }
 
-fn parse_path(path: &Path) -> Option<(String, u32, String)> {
+fn parse_path(path: &Path) -> Option<(String, u64, String)> {
     let parts: Vec<_> = path.iter().collect();
 
     if parts.len() < 4 {
@@ -333,7 +333,7 @@ fn parse_path(path: &Path) -> Option<(String, u32, String)> {
     Some((component, version, entry_name))
 }
 
-fn get_config_path(component: &str, version: &u32, entry: &str) -> PathBuf {
+fn get_config_path(component: &str, version: &u64, entry: &str) -> PathBuf {
     let cosmic_folder = get_cosmic_configs();
 
     Path::new(&cosmic_folder)

@@ -233,7 +233,31 @@ fn main() {
                 }
             }
 
-            let (deleted_count, errors) = delete_all_configurations(*verbose);
+            let cosmic_path = get_cosmic_configurations();
+            let mut deleted_count = 0;
+            let mut errors = Vec::new();
+
+            if !cosmic_path.exists() {
+                println!("No configurations to delete.");
+                return;
+            }
+
+            for entry in WalkDir::new(&cosmic_path)
+                .into_iter()
+                .filter_map(|e| e.ok())
+                .filter(|e| e.path().is_file())
+            {
+                if let Some((component, version, entry_name)) = parse_path(entry.path()) {
+                    if *verbose {
+                        println!("Deleting: {}", entry.path().display());
+                    }
+
+                    match delete_configuration(&component, &version, &entry_name) {
+                        Ok(()) => deleted_count += 1,
+                        Err(e) => errors.push(format!("{}: {}", entry.path().display(), e)),
+                    }
+                }
+            }
 
             if errors.is_empty() {
                 println!(
@@ -297,35 +321,6 @@ fn delete_configuration(component: &str, version: &u64, entry: &str) -> Result<(
             "Configuration entry does not exist",
         ))
     }
-}
-
-fn delete_all_configurations(verbose: bool) -> (usize, Vec<String>) {
-    let cosmic_path = get_cosmic_configurations();
-    let mut deleted_count = 0;
-    let mut errors = Vec::new();
-
-    if !cosmic_path.exists() {
-        return (0, errors);
-    }
-
-    for entry in WalkDir::new(&cosmic_path)
-        .into_iter()
-        .filter_map(|e| e.ok())
-        .filter(|e| e.path().is_file())
-    {
-        if let Some((component, version, entry_name)) = parse_path(entry.path()) {
-            if verbose {
-                println!("Deleting: {}", entry.path().display());
-            }
-
-            match delete_configuration(&component, &version, &entry_name) {
-                Ok(()) => deleted_count += 1,
-                Err(e) => errors.push(format!("{}: {}", entry.path().display(), e)),
-            }
-        }
-    }
-
-    (deleted_count, errors)
 }
 
 fn parse_path(path: &Path) -> Option<(String, u64, String)> {

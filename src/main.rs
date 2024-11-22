@@ -1,12 +1,12 @@
 #[cfg(test)]
 mod tests;
 
-use clap::{Parser, Subcommand};
+use clap::{error::ErrorKind, Parser, Subcommand};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     env, fs,
-    io::Write,
+    io::{Error, Write},
     path::{Path, PathBuf},
 };
 use unescaper::unescape;
@@ -133,16 +133,10 @@ fn main() {
             version,
             component,
             entry,
-        } => {
-            let path = get_config_path(component, version, entry);
-
-            if path.exists() {
-                fs::remove_file(path).unwrap();
-                println!("Configuration entry deleted successfully.");
-            } else {
-                eprintln!("Error: Configuration entry does not exist.");
-            }
-        }
+        } => match delete_configuration(component, version, entry) {
+            Ok(()) => println!("Configuration entry deleted successfully."),
+            Err(e) => eprintln!("Error: {}", e),
+        },
         Commands::Apply { file, verbose } => {
             if file.extension().and_then(|s| s.to_str()) != Some("json") {
                 eprintln!("Error: The file is not in JSON format.");
@@ -292,6 +286,19 @@ fn apply_configuration(component: &str, version: &u64, entry: &str, value: &str)
     true
 }
 
+fn delete_configuration(component: &str, version: &u64, entry: &str) -> Result<(), Error> {
+    let path = get_config_path(component, version, entry);
+    if path.exists() {
+        fs::remove_file(path)?;
+        Ok(())
+    } else {
+        Err(Error::new(
+            std::io::ErrorKind::NotFound,
+            "Configuration entry does not exist",
+        ))
+    }
+}
+
 fn delete_all_configurations(verbose: bool) -> (usize, Vec<String>) {
     let cosmic_path = get_cosmic_configs();
     let mut deleted_count = 0;
@@ -306,14 +313,15 @@ fn delete_all_configurations(verbose: bool) -> (usize, Vec<String>) {
         .filter_map(|e| e.ok())
         .filter(|e| e.path().is_file())
     {
-        if verbose {
-            println!("Deleting: {}", entry.path().display());
-        }
+        if let Some((component, version, entry_name)) = parse_path(entry.path()) {
+            if verbose {
+                println!("Deleting: {}", entry.path().display());
+            }
 
-        if let Err(e) = fs::remove_file(entry.path()) {
-            errors.push(format!("{}: {}", entry.path().display(), e));
-        } else {
-            deleted_count += 1;
+            match delete_configuration(&component, &version, &entry_name) {
+                Ok(()) => deleted_count += 1,
+                Err(e) => errors.push(format!("{}: {}", entry.path().display(), e)),
+            }
         }
     }
 

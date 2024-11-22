@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests;
 
-use clap::{error::ErrorKind, Parser, Subcommand};
+use clap::{Parser, Subcommand};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
@@ -172,7 +172,7 @@ fn main() {
             );
         }
         Commands::Backup { file, verbose } => {
-            let cosmic_path = get_cosmic_configs();
+            let cosmic_path = get_cosmic_configurations();
             let mut configurations: HashMap<(String, u64), HashMap<String, String>> =
                 HashMap::new();
             let mut entry_count = 0;
@@ -300,7 +300,7 @@ fn delete_configuration(component: &str, version: &u64, entry: &str) -> Result<(
 }
 
 fn delete_all_configurations(verbose: bool) -> (usize, Vec<String>) {
-    let cosmic_path = get_cosmic_configs();
+    let cosmic_path = get_cosmic_configurations();
     let mut deleted_count = 0;
     let mut errors = Vec::new();
 
@@ -344,7 +344,7 @@ fn parse_path(path: &Path) -> Option<(String, u64, String)> {
 }
 
 fn get_config_path(component: &str, version: &u64, entry: &str) -> PathBuf {
-    let cosmic_folder = get_cosmic_configs();
+    let cosmic_folder = get_cosmic_configurations();
 
     Path::new(&cosmic_folder)
         .join(component)
@@ -352,7 +352,7 @@ fn get_config_path(component: &str, version: &u64, entry: &str) -> PathBuf {
         .join(entry)
 }
 
-fn get_cosmic_configs() -> PathBuf {
+fn get_cosmic_configurations() -> PathBuf {
     let config_home = get_config_home();
 
     Path::new(&config_home).join("cosmic")

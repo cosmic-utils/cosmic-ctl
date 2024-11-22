@@ -184,7 +184,44 @@ fn main() {
             );
         }
         Commands::Backup { file, verbose } => {
-            let (backup_data, entry_count) = create_backup(*verbose);
+            let cosmic_path = get_cosmic_configs();
+            let mut configurations: HashMap<(String, u64), HashMap<String, String>> =
+                HashMap::new();
+            let mut entry_count = 0;
+
+            for entry in WalkDir::new(cosmic_path)
+                .into_iter()
+                .filter_map(|e| e.ok())
+                .filter(|e| e.path().is_file())
+            {
+                if let Some((component, version, entry_name)) = parse_path(entry.path()) {
+                    if *verbose {
+                        println!("Backing up: {}/v{}/{}", component, version, entry_name);
+                    }
+
+                    let content = fs::read_to_string(entry.path()).unwrap();
+
+                    configurations
+                        .entry((component.clone(), version))
+                        .or_insert_with(HashMap::new)
+                        .insert(entry_name, content);
+
+                    entry_count += 1;
+                }
+            }
+
+            let backup_data = ConfigFile {
+                schema: "https://raw.githubusercontent.com/HeitorAugustoLN/cosmic-ctl/refs/heads/main/schema.json".to_string(),
+                configurations: configurations
+                    .into_iter()
+                    .map(|((component, version), entries)| Entry {
+                        component,
+                        version,
+                        entries,
+                })
+                .collect(),
+            };
+
             let json_data = serde_json::to_string_pretty(&backup_data)
                 .expect("Failed to serialize backup data");
 
@@ -251,43 +288,6 @@ fn apply_configuration(component: &str, version: &u64, entry: &str, value: &str)
     fs::write(path, unescaped_value).unwrap();
 
     true
-}
-
-fn create_backup(verbose: bool) -> (ConfigFile, usize) {
-    let cosmic_path = get_cosmic_configs();
-    let mut configurations: HashMap<(String, u64), HashMap<String, String>> = HashMap::new();
-    let mut entry_count = 0;
-
-    for entry in WalkDir::new(cosmic_path).into_iter().filter_map(|e| e.ok()) {
-        if entry.path().is_file() {
-            if let Some((component, version, entry_name)) = parse_path(entry.path()) {
-                if verbose {
-                    println!("Backing up: {}/v{}/{}", component, version, entry_name);
-                }
-
-                let content = fs::read_to_string(entry.path()).unwrap();
-
-                configurations
-                    .entry((component.clone(), version))
-                    .or_insert_with(HashMap::new)
-                    .insert(entry_name, content);
-
-                entry_count += 1;
-            }
-        }
-    }
-
-    (ConfigFile {
-        schema: "https://raw.githubusercontent.com/HeitorAugustoLN/cosmic-ctl/refs/heads/main/schema.json".to_string(),
-        configurations: configurations
-            .into_iter()
-            .map(|((component, version), entries)| Entry {
-                component,
-                version,
-                entries,
-            })
-            .collect(),
-    }, entry_count)
 }
 
 fn delete_all_configurations(verbose: bool) -> (usize, Vec<String>) {

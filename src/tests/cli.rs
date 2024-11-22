@@ -482,5 +482,5 @@ fn test_reset_command_empty_config() {
         .args(["reset", "--force"])
         .assert()
         .success()
-        .stdout("Successfully deleted 0 configuration entries.\n");
+        .stdout("No configurations to delete.\n");
 }

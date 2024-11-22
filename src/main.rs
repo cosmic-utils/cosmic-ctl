@@ -125,16 +125,10 @@ fn main() {
             version,
             component,
             entry,
-        } => {
-            let path = get_config_path(component, version, entry);
-
-            if path.exists() {
-                let contents = fs::read_to_string(path).unwrap();
-                println!("{}", contents);
-            } else {
-                eprintln!("Error: Configuration entry does not exist.");
-            }
-        }
+        } => match read_configuration(component, version, entry) {
+            Some(contents) => println!("{}", contents),
+            None => eprintln!("Error: Configuration entry does not exist."),
+        },
         Commands::Delete {
             version,
             component,
@@ -266,21 +260,29 @@ fn main() {
     }
 }
 
-fn check_existing_value(path: &Path, new_value: &str) -> bool {
-    if path.exists() {
-        if let Ok(current_value) = fs::read_to_string(path) {
-            return current_value == new_value;
-        }
+fn check_existing_value(component: &str, version: &u64, entry: &str, new_value: &str) -> bool {
+    if let Some(current_value) = read_configuration(component, version, entry) {
+        return current_value == new_value;
     }
 
     false
+}
+
+fn read_configuration(component: &str, version: &u64, entry: &str) -> Option<String> {
+    let path = get_config_path(component, version, entry);
+
+    if path.exists() {
+        fs::read_to_string(path).ok()
+    } else {
+        None
+    }
 }
 
 fn apply_configuration(component: &str, version: &u64, entry: &str, value: &str) -> bool {
     let path = get_config_path(component, version, entry);
     let unescaped_value = unescape(value).unwrap();
 
-    if check_existing_value(&path, &unescaped_value) {
+    if check_existing_value(component, version, entry, &unescaped_value) {
         return false;
     }
 

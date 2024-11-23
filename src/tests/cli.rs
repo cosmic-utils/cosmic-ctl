@@ -3,10 +3,16 @@ use serde_json::json;
 use std::fs;
 use tempfile::TempDir;
 
-const COMPONENT: &str = "com.system76.CosmicComp";
-const ENTRY: &str = "autotile";
-const VERSION: &str = "1";
-const VALUE: &str = "true";
+const COSMIC_COMP: &str = "com.system76.CosmicComp";
+
+const ENTRY_AUTOTILE: &str = "autotile";
+const ENTRY_AUTOTILE_BEHAVIOR: &str = "autotile_behavior";
+
+const VERSION_1: i32 = 1;
+const VERSION_2: i32 = 2;
+
+const VALUE_TRUE: &str = "true";
+const VALUE_PER_WORKSPACE: &str = "PerWorkspace";
 
 #[test]
 fn test_write_command() {
@@ -19,12 +25,12 @@ fn test_write_command() {
         .args([
             "write",
             "--version",
-            VERSION,
+            &VERSION_1.to_string(),
             "--component",
-            COMPONENT,
+            COSMIC_COMP,
             "--entry",
-            ENTRY,
-            VALUE,
+            ENTRY_AUTOTILE,
+            VALUE_TRUE,
         ])
         .assert()
         .success()
@@ -36,12 +42,12 @@ fn test_write_command() {
         .args([
             "write",
             "--version",
-            VERSION,
+            &VERSION_1.to_string(),
             "--component",
-            COMPONENT,
+            COSMIC_COMP,
             "--entry",
-            ENTRY,
-            VALUE,
+            ENTRY_AUTOTILE,
+            VALUE_TRUE,
         ])
         .assert()
         .success()
@@ -50,12 +56,12 @@ fn test_write_command() {
     let config_path = temp_dir
         .path()
         .join("cosmic")
-        .join(COMPONENT)
-        .join(format!("v{}", VERSION))
-        .join(ENTRY);
+        .join(COSMIC_COMP)
+        .join(format!("v{}", VERSION_1))
+        .join(ENTRY_AUTOTILE);
 
     assert!(config_path.exists());
-    assert_eq!(fs::read_to_string(config_path).unwrap(), VALUE);
+    assert_eq!(fs::read_to_string(config_path).unwrap(), VALUE_TRUE);
 }
 
 #[test]
@@ -69,12 +75,12 @@ fn test_read_command() {
         .args([
             "write",
             "--version",
-            VERSION,
+            &VERSION_1.to_string(),
             "--component",
-            COMPONENT,
+            COSMIC_COMP,
             "--entry",
-            ENTRY,
-            VALUE,
+            ENTRY_AUTOTILE,
+            VALUE_TRUE,
         ])
         .assert()
         .success();
@@ -85,15 +91,15 @@ fn test_read_command() {
         .args([
             "read",
             "--version",
-            VERSION,
+            &VERSION_1.to_string(),
             "--component",
-            COMPONENT,
+            COSMIC_COMP,
             "--entry",
-            ENTRY,
+            ENTRY_AUTOTILE,
         ])
         .assert()
         .success()
-        .stdout(format!("{}\n", VALUE));
+        .stdout(format!("{}\n", VALUE_TRUE));
 }
 
 #[test]
@@ -107,12 +113,12 @@ fn test_delete_command() {
         .args([
             "write",
             "--version",
-            VERSION,
+            &VERSION_1.to_string(),
             "--component",
-            COMPONENT,
+            COSMIC_COMP,
             "--entry",
-            ENTRY,
-            VALUE,
+            ENTRY_AUTOTILE,
+            VALUE_TRUE,
         ])
         .assert()
         .success();
@@ -123,11 +129,11 @@ fn test_delete_command() {
         .args([
             "delete",
             "--version",
-            VERSION,
+            &VERSION_1.to_string(),
             "--component",
-            COMPONENT,
+            COSMIC_COMP,
             "--entry",
-            ENTRY,
+            ENTRY_AUTOTILE,
         ])
         .assert()
         .success()
@@ -136,9 +142,9 @@ fn test_delete_command() {
     let config_path = temp_dir
         .path()
         .join("cosmic")
-        .join(COMPONENT)
-        .join(format!("v{}", VERSION))
-        .join(ENTRY);
+        .join(COSMIC_COMP)
+        .join(format!("v{}", VERSION_1))
+        .join(ENTRY_AUTOTILE);
 
     assert!(!config_path.exists());
 }
@@ -148,16 +154,15 @@ fn test_apply_command() {
     let temp_dir = TempDir::new().unwrap();
     let config_home = temp_dir.path().to_str().unwrap();
 
-    // Create a temporary JSON config file
     let config_json = json!({
         "$schema": "https://raw.githubusercontent.com/HeitorAugustoLN/cosmic-ctl/refs/heads/main/schema.json",
         "configurations": [
             {
-                "component": "com.system76.CosmicComp",
-                "version": 1,
+                "component": COSMIC_COMP,
+                "version": VERSION_1,
                 "entries": {
-                    "autotile": "true",
-                    "autotile_behavior": "PerWorkspace"
+                    ENTRY_AUTOTILE: VALUE_TRUE,
+                    ENTRY_AUTOTILE_BEHAVIOR: VALUE_PER_WORKSPACE
                 }
             }
         ]
@@ -182,22 +187,22 @@ fn test_apply_command() {
     let autotile_path = temp_dir
         .path()
         .join("cosmic")
-        .join("com.system76.CosmicComp")
-        .join("v1")
-        .join("autotile");
+        .join(COSMIC_COMP)
+        .join(format!("v{}", VERSION_1))
+        .join(ENTRY_AUTOTILE);
     let autotile_behavior_path = temp_dir
         .path()
         .join("cosmic")
-        .join("com.system76.CosmicComp")
-        .join("v1")
-        .join("autotile_behavior");
+        .join(COSMIC_COMP)
+        .join(format!("v{}", VERSION_1))
+        .join(ENTRY_AUTOTILE_BEHAVIOR);
 
     assert!(autotile_path.exists());
     assert!(autotile_behavior_path.exists());
-    assert_eq!(fs::read_to_string(autotile_path).unwrap(), "true");
+    assert_eq!(fs::read_to_string(autotile_path).unwrap(), VALUE_TRUE);
     assert_eq!(
         fs::read_to_string(autotile_behavior_path).unwrap(),
-        "PerWorkspace"
+        VALUE_PER_WORKSPACE
     );
 }
 
@@ -210,11 +215,11 @@ fn test_apply_command_verbose() {
         "$schema": "https://raw.githubusercontent.com/HeitorAugustoLN/cosmic-ctl/refs/heads/main/schema.json",
         "configurations": [
             {
-                "component": "com.system76.CosmicComp",
-                "version": 1,
+                "component": COSMIC_COMP,
+                "version": VERSION_1,
                 "entries": {
-                    "autotile": "true",
-                    "autotile_behavior": "PerWorkspace"
+                    ENTRY_AUTOTILE: VALUE_TRUE,
+                    ENTRY_AUTOTILE_BEHAVIOR: VALUE_PER_WORKSPACE
                 }
             }
         ]
@@ -257,22 +262,22 @@ fn test_apply_command_verbose() {
     let autotile_path = temp_dir
         .path()
         .join("cosmic")
-        .join("com.system76.CosmicComp")
-        .join("v1")
-        .join("autotile");
+        .join(COSMIC_COMP)
+        .join(format!("v{}", VERSION_1))
+        .join(ENTRY_AUTOTILE);
     let autotile_behavior_path = temp_dir
         .path()
         .join("cosmic")
-        .join("com.system76.CosmicComp")
-        .join("v1")
-        .join("autotile_behavior");
+        .join(COSMIC_COMP)
+        .join(format!("v{}", VERSION_1))
+        .join(ENTRY_AUTOTILE_BEHAVIOR);
 
     assert!(autotile_path.exists());
     assert!(autotile_behavior_path.exists());
-    assert_eq!(fs::read_to_string(autotile_path).unwrap(), "true");
+    assert_eq!(fs::read_to_string(autotile_path).unwrap(), VALUE_TRUE);
     assert_eq!(
         fs::read_to_string(autotile_behavior_path).unwrap(),
-        "PerWorkspace"
+        VALUE_PER_WORKSPACE
     );
 }
 
@@ -287,12 +292,12 @@ fn test_backup_command() {
         .args([
             "write",
             "--version",
-            VERSION,
+            &VERSION_1.to_string(),
             "--component",
-            COMPONENT,
+            COSMIC_COMP,
             "--entry",
-            ENTRY,
-            VALUE,
+            ENTRY_AUTOTILE,
+            VALUE_TRUE,
         ])
         .assert()
         .success();
@@ -327,12 +332,12 @@ fn test_backup_command_verbose() {
         .args([
             "write",
             "--version",
-            VERSION,
+            &VERSION_1.to_string(),
             "--component",
-            COMPONENT,
+            COSMIC_COMP,
             "--entry",
-            ENTRY,
-            VALUE,
+            ENTRY_AUTOTILE,
+            VALUE_TRUE,
         ])
         .assert()
         .success();
@@ -348,7 +353,7 @@ fn test_backup_command_verbose() {
         .success()
         .stdout(format!(
             "Backing up: {}/v{}/{}\nBackup completed successfully. 1 entries backed up.\n",
-            COMPONENT, VERSION, ENTRY
+            COSMIC_COMP, VERSION_1, ENTRY_AUTOTILE
         ));
 
     assert!(backup_file.exists());
@@ -370,12 +375,12 @@ fn test_reset_command() {
         .args([
             "write",
             "--version",
-            VERSION,
+            &VERSION_1.to_string(),
             "--component",
-            COMPONENT,
+            COSMIC_COMP,
             "--entry",
-            ENTRY,
-            VALUE,
+            ENTRY_AUTOTILE,
+            VALUE_TRUE,
         ])
         .assert()
         .success();
@@ -386,12 +391,12 @@ fn test_reset_command() {
         .args([
             "write",
             "--version",
-            VERSION,
+            &VERSION_1.to_string(),
             "--component",
-            COMPONENT,
+            COSMIC_COMP,
             "--entry",
-            "autotile_behavior",
-            "PerWorkspace",
+            ENTRY_AUTOTILE_BEHAVIOR,
+            VALUE_PER_WORKSPACE,
         ])
         .assert()
         .success();
@@ -399,15 +404,15 @@ fn test_reset_command() {
     let autotile_path = temp_dir
         .path()
         .join("cosmic")
-        .join("com.system76.CosmicComp")
-        .join("v1")
-        .join("autotile");
+        .join(COSMIC_COMP)
+        .join(format!("v{}", VERSION_1))
+        .join(ENTRY_AUTOTILE);
     let autotile_behavior_path = temp_dir
         .path()
         .join("cosmic")
-        .join("com.system76.CosmicComp")
-        .join("v1")
-        .join("autotile_behavior");
+        .join(COSMIC_COMP)
+        .join(format!("v{}", VERSION_1))
+        .join(ENTRY_AUTOTILE_BEHAVIOR);
 
     assert!(autotile_path.exists());
     assert!(autotile_behavior_path.exists());
@@ -437,12 +442,12 @@ fn test_reset_command_verbose() {
         .args([
             "write",
             "--version",
-            VERSION,
+            &VERSION_1.to_string(),
             "--component",
-            COMPONENT,
+            COSMIC_COMP,
             "--entry",
-            ENTRY,
-            VALUE,
+            ENTRY_AUTOTILE,
+            VALUE_TRUE,
         ])
         .assert()
         .success();
@@ -450,9 +455,9 @@ fn test_reset_command_verbose() {
     let config_path = temp_dir
         .path()
         .join("cosmic")
-        .join(COMPONENT)
-        .join(format!("v{}", VERSION))
-        .join(ENTRY);
+        .join(COSMIC_COMP)
+        .join(format!("v{}", VERSION_1))
+        .join(ENTRY_AUTOTILE);
 
     assert!(config_path.exists());
 

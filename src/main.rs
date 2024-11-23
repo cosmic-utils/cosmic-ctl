@@ -1,7 +1,9 @@
 #[cfg(test)]
 mod tests;
 
+use bracoxide::explode;
 use clap::{Parser, Subcommand};
+use glob::Pattern;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
@@ -88,6 +90,9 @@ enum Commands {
         /// Show which entries are being deleted.
         #[arg(short, long)]
         verbose: bool,
+        /// Patterns to exclude from reset (comma-separated)
+        #[arg(long)]
+        exclude: Option<String>,
     },
 }
 
@@ -219,7 +224,11 @@ fn main() {
                 entry_count
             );
         }
-        Commands::Reset { force, verbose } => {
+        Commands::Reset {
+            force,
+            verbose,
+            exclude,
+        } => {
             if !*force {
                 print!("Are you sure you want to delete all configuration entries? This action cannot be undone. [y/N] ");
                 std::io::stdout().flush().unwrap();
@@ -242,12 +251,47 @@ fn main() {
                 return;
             }
 
+            let exclude_patterns = split_string_respect_braces(exclude.clone())
+                .into_iter()
+                .flat_map(|pattern| explode(&pattern).unwrap_or_else(|_| vec![pattern.clone()]))
+                .filter_map(|pattern| {
+                    let pattern = if !pattern.contains('/') {
+                        format!("{}/**", pattern)
+                    } else if pattern.matches('/').count() == 1 {
+                        format!("{}/*", pattern)
+                    } else {
+                        pattern
+                    };
+
+                    match Pattern::new(&pattern) {
+                        Ok(p) => Some(p),
+                        Err(e) => {
+                            errors.push(format!("Invalid pattern '{}': {}", pattern, e));
+                            None
+                        }
+                    }
+                })
+                .collect::<Vec<_>>();
+
             for entry in WalkDir::new(&cosmic_path)
                 .into_iter()
                 .filter_map(|e| e.ok())
                 .filter(|e| e.path().is_file())
             {
                 if let Some((component, version, entry_name)) = parse_path(entry.path()) {
+                    // Check if path matches any exclude pattern
+                    let relative_path = format!("{}/v{}/{}", component, version, entry_name);
+                    let should_exclude = exclude_patterns
+                        .iter()
+                        .any(|pattern| pattern.matches(&relative_path));
+
+                    if should_exclude {
+                        if *verbose {
+                            println!("Skipping excluded path: {}", relative_path);
+                        }
+                        continue;
+                    }
+
                     if *verbose {
                         println!("Deleting: {}", entry.path().display());
                     }
@@ -358,4 +402,41 @@ fn get_config_home() -> String {
         let home = env::var("HOME").unwrap();
         format!("{}/.config", home)
     })
+}
+
+fn split_string_respect_braces(input: Option<String>) -> Vec<String> {
+    match input {
+        None => Vec::new(),
+        Some(s) => {
+            let mut result = Vec::new();
+            let mut current = String::new();
+            let mut brace_count = 0;
+
+            for c in s.chars() {
+                match c {
+                    '{' => {
+                        brace_count += 1;
+                        current.push(c);
+                    }
+                    '}' => {
+                        brace_count -= 1;
+                        current.push(c);
+                    }
+                    ',' if brace_count == 0 => {
+                        if !current.is_empty() {
+                            result.push(current.trim().to_string());
+                            current = String::new();
+                        }
+                    }
+                    _ => current.push(c),
+                }
+            }
+
+            if !current.is_empty() {
+                result.push(current.trim().to_string());
+            }
+
+            result
+        }
+    }
 }

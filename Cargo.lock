@@ -74,6 +74,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b048fb63fd8b5923fc5aa7b340d8e156aec7ec02f0c78fa8a6ddc2613f6f71de"
 
 [[package]]
+name = "bracoxide"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fbc0bcb5424e8e1f29c21a00f2d222df5e8e9779732ff03f840315d8fbac708e"
+
+[[package]]
 name = "bstr"
 version = "1.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -141,7 +147,9 @@ name = "cosmic-ctl"
 version = "1.0.0"
 dependencies = [
  "assert_cmd",
+ "bracoxide",
  "clap",
+ "glob",
  "serde",
  "serde_json",
  "tempfile",
@@ -176,6 +184,12 @@ name = "fastrand"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "486f806e73c5707928240ddc295403b1b93c96a02038563881c4a2fd84b81ac4"
+
+[[package]]
+name = "glob"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d2fabcfbdc87f4758337ca535fb41a6d701b65693ce38287d856d1674551ec9b"
 
 [[package]]
 name = "heck"

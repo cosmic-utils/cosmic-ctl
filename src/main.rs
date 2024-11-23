@@ -97,17 +97,33 @@ enum Commands {
 }
 
 #[derive(Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+enum Operation {
+    Write,
+    Read,
+    Delete,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(untagged)]
+enum EntryContent {
+    WriteEntries(HashMap<String, String>),
+    ReadDeleteEntries(Vec<String>),
+}
+
+#[derive(Deserialize, Serialize)]
 struct Entry {
     component: String,
     version: u64,
-    entries: HashMap<String, String>,
+    operation: Operation,
+    entries: EntryContent,
 }
 
 #[derive(Deserialize, Serialize)]
 struct ConfigFile {
     #[serde(rename = "$schema")]
     schema: String,
-    configurations: Vec<Entry>,
+    operations: Vec<Entry>,
 }
 
 fn main() {
@@ -152,34 +168,90 @@ fn main() {
             let config_file: ConfigFile =
                 serde_json::from_str(&file_content).expect("Invalid JSON format");
 
-            let mut changes = 0;
+            let mut write_changes = 0;
+            let mut read_count = 0;
+            let mut delete_count = 0;
             let mut skipped = 0;
 
-            for entry in config_file.configurations {
-                for (key, value) in entry.entries {
-                    if !write_configuration(&entry.component, &entry.version, &key, &value) {
-                        if *verbose {
-                            println!(
-                                "Skipping {}/v{}/{} - value unchanged",
-                                entry.component, entry.version, key
-                            );
+            for entry in config_file.operations {
+                match (entry.operation, entry.entries) {
+                    (Operation::Write, EntryContent::WriteEntries(entries)) => {
+                        for (key, value) in entries {
+                            if !write_configuration(&entry.component, &entry.version, &key, &value)
+                            {
+                                if *verbose {
+                                    println!(
+                                        "Skipping {}/v{}/{} - value unchanged",
+                                        entry.component, entry.version, key
+                                    );
+                                }
+                                skipped += 1;
+                            } else {
+                                write_changes += 1;
+                            }
                         }
-                        skipped += 1;
-                    } else {
-                        changes += 1;
+                    }
+                    (Operation::Read, EntryContent::ReadDeleteEntries(keys)) => {
+                        for key in keys {
+                            match read_configuration(&entry.component, &entry.version, &key) {
+                                Some(content) => {
+                                    println!(
+                                        "{}/v{}/{}: {}",
+                                        entry.component, entry.version, key, content
+                                    );
+                                    read_count += 1;
+                                }
+                                None => {
+                                    if *verbose {
+                                        println!(
+                                            "Entry not found: {}/v{}/{}",
+                                            entry.component, entry.version, key
+                                        );
+                                    }
+                                    skipped += 1;
+                                }
+                            }
+                        }
+                    }
+                    (Operation::Delete, EntryContent::ReadDeleteEntries(keys)) => {
+                        for key in keys {
+                            match delete_configuration(&entry.component, &entry.version, &key) {
+                                Ok(()) => {
+                                    if *verbose {
+                                        println!(
+                                            "Deleted: {}/v{}/{}",
+                                            entry.component, entry.version, key
+                                        );
+                                    }
+                                    delete_count += 1;
+                                }
+                                Err(e) => {
+                                    if *verbose {
+                                        println!(
+                                            "Failed to delete {}/v{}/{}: {}",
+                                            entry.component, entry.version, key, e
+                                        );
+                                    }
+                                    skipped += 1;
+                                }
+                            }
+                        }
+                    }
+                    _ => {
+                        eprintln!("Invalid combination of operation and entries format");
+                        return;
                     }
                 }
             }
 
             println!(
-                "Configurations applied successfully. {} changes made, {} entries skipped.",
-                changes, skipped
+                "Operations completed successfully. {} writes, {} reads, {} deletes, {} entries skipped.",
+                write_changes, read_count, delete_count, skipped
             );
         }
         Commands::Backup { file, verbose } => {
             let cosmic_path = get_cosmic_configurations();
-            let mut configurations: HashMap<(String, u64), HashMap<String, String>> =
-                HashMap::new();
+            let mut operations: HashMap<(String, u64), HashMap<String, String>> = HashMap::new();
             let mut entry_count = 0;
 
             for entry in WalkDir::new(cosmic_path)
@@ -194,7 +266,7 @@ fn main() {
 
                     let content = fs::read_to_string(entry.path()).unwrap();
 
-                    configurations
+                    operations
                         .entry((component.clone(), version))
                         .or_insert_with(HashMap::new)
                         .insert(entry_name, content);
@@ -205,12 +277,13 @@ fn main() {
 
             let backup_data = ConfigFile {
                 schema: "https://raw.githubusercontent.com/HeitorAugustoLN/cosmic-ctl/refs/heads/main/schema.json".to_string(),
-                configurations: configurations
+                operations: operations
                     .into_iter()
                     .map(|((component, version), entries)| Entry {
                         component,
                         version,
-                        entries,
+                        operation: Operation::Write,
+                        entries: EntryContent::WriteEntries(entries),
                 })
                 .collect(),
             };

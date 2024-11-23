@@ -1,9 +1,10 @@
 {
   "$schema": "https://raw.githubusercontent.com/HeitorAugustoLN/cosmic-ctl/refs/heads/main/schema.json",
-  "configurations": [
+  "operations": [
     {
       "component": "com.system76.CosmicComp",
       "version": 1,
+      "operation": "write",
       "entries": {
         "autotile": "true",
         "autotile_behavior": "PerWorkspace"
@@ -12,9 +13,26 @@
     {
       "component": "com.system76.CosmicSettings",
       "version": 1,
+      "operation": "write",
       "entries": {
         "active-page": "\"time-date\""
       }
+    },
+    {
+      "component": "com.system76.CosmicComp",
+      "version": 1,
+      "operation": "delete",
+      "entries": [
+        "autotile_behavior"
+      ]
+    },
+    {
+      "component": "com.system76.CosmicComp",
+      "version": 1,
+      "operation": "read",
+      "entries": [
+        "autotile"
+      ]
     }
   ]
 }

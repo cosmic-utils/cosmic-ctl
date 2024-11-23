@@ -3,6 +3,12 @@ use serde_json::json;
 use std::fs;
 use tempfile::TempDir;
 
+const WRITE_OPERATION: &str = "write";
+const READ_OPERATION: &str = "read";
+const DELETE_OPERATION: &str = "delete";
+const APPLY_OPERATION: &str = "apply";
+const BACKUP_OPERATION: &str = "backup";
+
 const COSMIC_COMP: &str = "com.system76.CosmicComp";
 
 const ENTRY_AUTOTILE: &str = "autotile";
@@ -25,7 +31,7 @@ fn test_write_command() {
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
         .args([
-            "write",
+            WRITE_OPERATION,
             "--version",
             &VERSION_1.to_string(),
             "--component",
@@ -42,7 +48,7 @@ fn test_write_command() {
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
         .args([
-            "write",
+            WRITE_OPERATION,
             "--version",
             &VERSION_1.to_string(),
             "--component",
@@ -75,7 +81,7 @@ fn test_read_command() {
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
         .args([
-            "write",
+            WRITE_OPERATION,
             "--version",
             &VERSION_1.to_string(),
             "--component",
@@ -91,7 +97,7 @@ fn test_read_command() {
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
         .args([
-            "read",
+            READ_OPERATION,
             "--version",
             &VERSION_1.to_string(),
             "--component",
@@ -113,7 +119,7 @@ fn test_delete_command() {
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
         .args([
-            "write",
+            WRITE_OPERATION,
             "--version",
             &VERSION_1.to_string(),
             "--component",
@@ -129,7 +135,7 @@ fn test_delete_command() {
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
         .args([
-            "delete",
+            DELETE_OPERATION,
             "--version",
             &VERSION_1.to_string(),
             "--component",
@@ -158,10 +164,11 @@ fn test_apply_command() {
 
     let config_json = json!({
         "$schema": "https://raw.githubusercontent.com/HeitorAugustoLN/cosmic-ctl/refs/heads/main/schema.json",
-        "configurations": [
+        "operations": [
             {
                 "component": COSMIC_COMP,
                 "version": VERSION_1,
+                "operation": WRITE_OPERATION,
                 "entries": {
                     ENTRY_AUTOTILE: VALUE_TRUE,
                     ENTRY_AUTOTILE_BEHAVIOR: VALUE_PER_WORKSPACE
@@ -180,11 +187,13 @@ fn test_apply_command() {
     Command::cargo_bin("cosmic-ctl")
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
-        .arg("apply")
+        .arg(APPLY_OPERATION)
         .arg(config_file)
         .assert()
         .success()
-        .stdout("Configurations applied successfully. 2 changes made, 0 entries skipped.\n");
+        .stdout(
+            "Operations completed successfully. 2 writes, 0 reads, 0 deletes, 0 entries skipped.\n",
+        );
 
     let autotile_path = temp_dir
         .path()
@@ -215,10 +224,11 @@ fn test_apply_command_verbose() {
 
     let config_json = json!({
         "$schema": "https://raw.githubusercontent.com/HeitorAugustoLN/cosmic-ctl/refs/heads/main/schema.json",
-        "configurations": [
+        "operations": [
             {
                 "component": COSMIC_COMP,
                 "version": VERSION_1,
+                "operation": WRITE_OPERATION,
                 "entries": {
                     ENTRY_AUTOTILE: VALUE_TRUE,
                     ENTRY_AUTOTILE_BEHAVIOR: VALUE_PER_WORKSPACE
@@ -237,16 +247,18 @@ fn test_apply_command_verbose() {
     Command::cargo_bin("cosmic-ctl")
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
-        .args(["apply", "--verbose"])
+        .args([APPLY_OPERATION, "--verbose"])
         .arg(&config_file)
         .assert()
         .success()
-        .stdout("Configurations applied successfully. 2 changes made, 0 entries skipped.\n");
+        .stdout(
+            "Operations completed successfully. 2 writes, 0 reads, 0 deletes, 0 entries skipped.\n",
+        );
 
     let output = Command::cargo_bin("cosmic-ctl")
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
-        .args(["apply", "--verbose"])
+        .args([APPLY_OPERATION, "--verbose"])
         .arg(&config_file)
         .assert()
         .success();
@@ -257,9 +269,9 @@ fn test_apply_command_verbose() {
     assert!(
         stdout.contains("Skipping com.system76.CosmicComp/v1/autotile_behavior - value unchanged")
     );
-    assert!(
-        stdout.contains("Configurations applied successfully. 0 changes made, 2 entries skipped.")
-    );
+    assert!(stdout.contains(
+        "Operations completed successfully. 0 writes, 0 reads, 0 deletes, 2 entries skipped."
+    ));
 
     let autotile_path = temp_dir
         .path()
@@ -292,7 +304,7 @@ fn test_backup_command() {
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
         .args([
-            "write",
+            WRITE_OPERATION,
             "--version",
             &VERSION_1.to_string(),
             "--component",
@@ -309,7 +321,7 @@ fn test_backup_command() {
     Command::cargo_bin("cosmic-ctl")
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
-        .arg("backup")
+        .arg(BACKUP_OPERATION)
         .arg(&backup_file)
         .assert()
         .success()
@@ -319,7 +331,7 @@ fn test_backup_command() {
 
     let backup_content: serde_json::Value =
         serde_json::from_str(&fs::read_to_string(backup_file).unwrap()).unwrap();
-    assert!(backup_content.get("configurations").is_some());
+    assert!(backup_content.get("operations").is_some());
     assert!(backup_content.get("$schema").is_some());
 }
 
@@ -332,7 +344,7 @@ fn test_backup_command_verbose() {
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
         .args([
-            "write",
+            WRITE_OPERATION,
             "--version",
             &VERSION_1.to_string(),
             "--component",
@@ -349,7 +361,7 @@ fn test_backup_command_verbose() {
     Command::cargo_bin("cosmic-ctl")
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
-        .args(["backup", "--verbose"])
+        .args([BACKUP_OPERATION, "--verbose"])
         .arg(&backup_file)
         .assert()
         .success()
@@ -362,7 +374,7 @@ fn test_backup_command_verbose() {
 
     let backup_content: serde_json::Value =
         serde_json::from_str(&fs::read_to_string(backup_file).unwrap()).unwrap();
-    assert!(backup_content.get("configurations").is_some());
+    assert!(backup_content.get("operations").is_some());
     assert!(backup_content.get("$schema").is_some());
 }
 
@@ -375,7 +387,7 @@ fn test_reset_command() {
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
         .args([
-            "write",
+            WRITE_OPERATION,
             "--version",
             &VERSION_1.to_string(),
             "--component",
@@ -391,7 +403,7 @@ fn test_reset_command() {
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
         .args([
-            "write",
+            WRITE_OPERATION,
             "--version",
             &VERSION_1.to_string(),
             "--component",
@@ -442,7 +454,7 @@ fn test_reset_command_verbose() {
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
         .args([
-            "write",
+            WRITE_OPERATION,
             "--version",
             &VERSION_1.to_string(),
             "--component",
@@ -501,7 +513,7 @@ fn test_reset_command_with_exclude() {
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
         .args([
-            "write",
+            WRITE_OPERATION,
             "--version",
             &VERSION_1.to_string(),
             "--component",
@@ -517,7 +529,7 @@ fn test_reset_command_with_exclude() {
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
         .args([
-            "write",
+            WRITE_OPERATION,
             "--version",
             &VERSION_1.to_string(),
             "--component",
@@ -533,7 +545,7 @@ fn test_reset_command_with_exclude() {
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
         .args([
-            "write",
+            WRITE_OPERATION,
             "--version",
             &VERSION_2.to_string(),
             "--component",
@@ -596,7 +608,7 @@ fn test_reset_command_with_exclude_entire_component() {
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
         .args([
-            "write",
+            WRITE_OPERATION,
             "--version",
             &VERSION_1.to_string(),
             "--component",
@@ -612,7 +624,7 @@ fn test_reset_command_with_exclude_entire_component() {
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
         .args([
-            "write",
+            WRITE_OPERATION,
             "--version",
             &VERSION_1.to_string(),
             "--component",
@@ -628,7 +640,7 @@ fn test_reset_command_with_exclude_entire_component() {
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
         .args([
-            "write",
+            WRITE_OPERATION,
             "--version",
             &VERSION_2.to_string(),
             "--component",
@@ -686,7 +698,7 @@ fn test_reset_command_with_exclude_component_version() {
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
         .args([
-            "write",
+            WRITE_OPERATION,
             "--version",
             &VERSION_1.to_string(),
             "--component",
@@ -702,7 +714,7 @@ fn test_reset_command_with_exclude_component_version() {
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
         .args([
-            "write",
+            WRITE_OPERATION,
             "--version",
             &VERSION_1.to_string(),
             "--component",
@@ -718,7 +730,7 @@ fn test_reset_command_with_exclude_component_version() {
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
         .args([
-            "write",
+            WRITE_OPERATION,
             "--version",
             &VERSION_2.to_string(),
             "--component",
@@ -781,7 +793,7 @@ fn test_reset_command_with_exclude_brace_expansion() {
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
         .args([
-            "write",
+            WRITE_OPERATION,
             "--version",
             &VERSION_1.to_string(),
             "--component",
@@ -797,7 +809,7 @@ fn test_reset_command_with_exclude_brace_expansion() {
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
         .args([
-            "write",
+            WRITE_OPERATION,
             "--version",
             &VERSION_1.to_string(),
             "--component",
@@ -813,7 +825,7 @@ fn test_reset_command_with_exclude_brace_expansion() {
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
         .args([
-            "write",
+            WRITE_OPERATION,
             "--version",
             &VERSION_2.to_string(),
             "--component",
@@ -884,7 +896,7 @@ fn test_reset_command_with_exclude_with_wildcard() {
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
         .args([
-            "write",
+            WRITE_OPERATION,
             "--version",
             &VERSION_1.to_string(),
             "--component",
@@ -900,7 +912,7 @@ fn test_reset_command_with_exclude_with_wildcard() {
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
         .args([
-            "write",
+            WRITE_OPERATION,
             "--version",
             &VERSION_1.to_string(),
             "--component",
@@ -916,7 +928,7 @@ fn test_reset_command_with_exclude_with_wildcard() {
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
         .args([
-            "write",
+            WRITE_OPERATION,
             "--version",
             &VERSION_2.to_string(),
             "--component",
@@ -979,7 +991,7 @@ fn test_reset_command_with_exclude_with_brace_expansion_and_wildcard() {
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
         .args([
-            "write",
+            WRITE_OPERATION,
             "--version",
             &VERSION_1.to_string(),
             "--component",
@@ -995,7 +1007,7 @@ fn test_reset_command_with_exclude_with_brace_expansion_and_wildcard() {
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
         .args([
-            "write",
+            WRITE_OPERATION,
             "--version",
             &VERSION_1.to_string(),
             "--component",
@@ -1011,7 +1023,7 @@ fn test_reset_command_with_exclude_with_brace_expansion_and_wildcard() {
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
         .args([
-            "write",
+            WRITE_OPERATION,
             "--version",
             &VERSION_2.to_string(),
             "--component",
@@ -1027,7 +1039,7 @@ fn test_reset_command_with_exclude_with_brace_expansion_and_wildcard() {
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
         .args([
-            "write",
+            WRITE_OPERATION,
             "--version",
             &VERSION_1.to_string(),
             "--component",

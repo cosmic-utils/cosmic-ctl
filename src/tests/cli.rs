@@ -7,12 +7,14 @@ const COSMIC_COMP: &str = "com.system76.CosmicComp";
 
 const ENTRY_AUTOTILE: &str = "autotile";
 const ENTRY_AUTOTILE_BEHAVIOR: &str = "autotile_behavior";
+const ENTRY_XKB_CONFIG: &str = "xkb_config";
 
 const VERSION_1: i32 = 1;
 const VERSION_2: i32 = 2;
 
 const VALUE_TRUE: &str = "true";
 const VALUE_PER_WORKSPACE: &str = "PerWorkspace";
+const VALUE_XKB_CONFIG: &str = "(\n    rules: \"\",\n    model: \"\",\n    layout: \"br\",\n    variant: \"\",\n    options: None,\n    repeat_delay: 600,\n    repeat_rate: 25,\n)";
 
 #[test]
 fn test_write_command() {
@@ -488,4 +490,605 @@ fn test_reset_command_empty_config() {
         .assert()
         .success()
         .stdout("No configurations to delete.\n");
+}
+
+#[test]
+fn test_reset_command_with_exclude() {
+    let temp_dir = TempDir::new().unwrap();
+    let config_home = temp_dir.path().to_str().unwrap();
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args([
+            "write",
+            "--version",
+            &VERSION_1.to_string(),
+            "--component",
+            COSMIC_COMP,
+            "--entry",
+            ENTRY_AUTOTILE,
+            VALUE_TRUE,
+        ])
+        .assert()
+        .success();
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args([
+            "write",
+            "--version",
+            &VERSION_1.to_string(),
+            "--component",
+            COSMIC_COMP,
+            "--entry",
+            ENTRY_AUTOTILE_BEHAVIOR,
+            VALUE_PER_WORKSPACE,
+        ])
+        .assert()
+        .success();
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args([
+            "write",
+            "--version",
+            &VERSION_2.to_string(),
+            "--component",
+            COSMIC_COMP,
+            "--entry",
+            ENTRY_AUTOTILE,
+            VALUE_TRUE,
+        ])
+        .assert()
+        .success();
+
+    let autotile_path = temp_dir
+        .path()
+        .join("cosmic")
+        .join(COSMIC_COMP)
+        .join(format!("v{}", VERSION_1))
+        .join(ENTRY_AUTOTILE);
+
+    let autotile_behavior_path = temp_dir
+        .path()
+        .join("cosmic")
+        .join(COSMIC_COMP)
+        .join(format!("v{}", VERSION_1))
+        .join(ENTRY_AUTOTILE_BEHAVIOR);
+
+    let autotile_v2_path = temp_dir
+        .path()
+        .join("cosmic")
+        .join(COSMIC_COMP)
+        .join(format!("v{}", VERSION_2))
+        .join(ENTRY_AUTOTILE);
+
+    assert!(autotile_path.exists());
+    assert!(autotile_behavior_path.exists());
+    assert!(autotile_v2_path.exists());
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args([
+            "reset",
+            "--force",
+            "--exclude",
+            &format!("{}/v{}/{}", COSMIC_COMP, VERSION_1, ENTRY_AUTOTILE),
+        ])
+        .assert()
+        .success();
+
+    assert!(autotile_path.exists());
+    assert!(!autotile_behavior_path.exists());
+    assert!(!autotile_v2_path.exists());
+}
+
+#[test]
+fn test_reset_command_with_exclude_entire_component() {
+    let temp_dir = TempDir::new().unwrap();
+    let config_home = temp_dir.path().to_str().unwrap();
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args([
+            "write",
+            "--version",
+            &VERSION_1.to_string(),
+            "--component",
+            COSMIC_COMP,
+            "--entry",
+            ENTRY_AUTOTILE,
+            VALUE_TRUE,
+        ])
+        .assert()
+        .success();
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args([
+            "write",
+            "--version",
+            &VERSION_1.to_string(),
+            "--component",
+            COSMIC_COMP,
+            "--entry",
+            ENTRY_AUTOTILE_BEHAVIOR,
+            VALUE_PER_WORKSPACE,
+        ])
+        .assert()
+        .success();
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args([
+            "write",
+            "--version",
+            &VERSION_2.to_string(),
+            "--component",
+            COSMIC_COMP,
+            "--entry",
+            ENTRY_AUTOTILE,
+            VALUE_TRUE,
+        ])
+        .assert()
+        .success();
+
+    let autotile_path = temp_dir
+        .path()
+        .join("cosmic")
+        .join(COSMIC_COMP)
+        .join(format!("v{}", VERSION_1))
+        .join(ENTRY_AUTOTILE);
+
+    let autotile_behavior_path = temp_dir
+        .path()
+        .join("cosmic")
+        .join(COSMIC_COMP)
+        .join(format!("v{}", VERSION_1))
+        .join(ENTRY_AUTOTILE_BEHAVIOR);
+
+    let autotile_v2_path = temp_dir
+        .path()
+        .join("cosmic")
+        .join(COSMIC_COMP)
+        .join(format!("v{}", VERSION_2))
+        .join(ENTRY_AUTOTILE);
+
+    assert!(autotile_path.exists());
+    assert!(autotile_behavior_path.exists());
+    assert!(autotile_v2_path.exists());
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args(["reset", "--force", "--exclude", &format!("{}", COSMIC_COMP)])
+        .assert()
+        .success();
+
+    assert!(autotile_path.exists());
+    assert!(autotile_behavior_path.exists());
+    assert!(autotile_v2_path.exists());
+}
+
+#[test]
+fn test_reset_command_with_exclude_component_version() {
+    let temp_dir = TempDir::new().unwrap();
+    let config_home = temp_dir.path().to_str().unwrap();
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args([
+            "write",
+            "--version",
+            &VERSION_1.to_string(),
+            "--component",
+            COSMIC_COMP,
+            "--entry",
+            ENTRY_AUTOTILE,
+            VALUE_TRUE,
+        ])
+        .assert()
+        .success();
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args([
+            "write",
+            "--version",
+            &VERSION_1.to_string(),
+            "--component",
+            COSMIC_COMP,
+            "--entry",
+            ENTRY_AUTOTILE_BEHAVIOR,
+            VALUE_PER_WORKSPACE,
+        ])
+        .assert()
+        .success();
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args([
+            "write",
+            "--version",
+            &VERSION_2.to_string(),
+            "--component",
+            COSMIC_COMP,
+            "--entry",
+            ENTRY_AUTOTILE,
+            VALUE_TRUE,
+        ])
+        .assert()
+        .success();
+
+    let autotile_path = temp_dir
+        .path()
+        .join("cosmic")
+        .join(COSMIC_COMP)
+        .join(format!("v{}", VERSION_1))
+        .join(ENTRY_AUTOTILE);
+
+    let autotile_behavior_path = temp_dir
+        .path()
+        .join("cosmic")
+        .join(COSMIC_COMP)
+        .join(format!("v{}", VERSION_1))
+        .join(ENTRY_AUTOTILE_BEHAVIOR);
+
+    let autotile_v2_path = temp_dir
+        .path()
+        .join("cosmic")
+        .join(COSMIC_COMP)
+        .join(format!("v{}", VERSION_2))
+        .join(ENTRY_AUTOTILE);
+
+    assert!(autotile_path.exists());
+    assert!(autotile_behavior_path.exists());
+    assert!(autotile_v2_path.exists());
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args([
+            "reset",
+            "--force",
+            "--exclude",
+            &format!("{}/v{}", COSMIC_COMP, VERSION_2),
+        ])
+        .assert()
+        .success();
+
+    assert!(!autotile_path.exists());
+    assert!(!autotile_behavior_path.exists());
+    assert!(autotile_v2_path.exists());
+}
+
+#[test]
+fn test_reset_command_with_exclude_brace_expansion() {
+    let temp_dir = TempDir::new().unwrap();
+    let config_home = temp_dir.path().to_str().unwrap();
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args([
+            "write",
+            "--version",
+            &VERSION_1.to_string(),
+            "--component",
+            COSMIC_COMP,
+            "--entry",
+            ENTRY_AUTOTILE,
+            VALUE_TRUE,
+        ])
+        .assert()
+        .success();
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args([
+            "write",
+            "--version",
+            &VERSION_1.to_string(),
+            "--component",
+            COSMIC_COMP,
+            "--entry",
+            ENTRY_AUTOTILE_BEHAVIOR,
+            VALUE_PER_WORKSPACE,
+        ])
+        .assert()
+        .success();
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args([
+            "write",
+            "--version",
+            &VERSION_2.to_string(),
+            "--component",
+            COSMIC_COMP,
+            "--entry",
+            ENTRY_AUTOTILE,
+            VALUE_TRUE,
+        ])
+        .assert()
+        .success();
+
+    let autotile_path = temp_dir
+        .path()
+        .join("cosmic")
+        .join(COSMIC_COMP)
+        .join(format!("v{}", VERSION_1))
+        .join(ENTRY_AUTOTILE);
+
+    let autotile_behavior_path = temp_dir
+        .path()
+        .join("cosmic")
+        .join(COSMIC_COMP)
+        .join(format!("v{}", VERSION_1))
+        .join(ENTRY_AUTOTILE_BEHAVIOR);
+
+    let autotile_v2_path = temp_dir
+        .path()
+        .join("cosmic")
+        .join(COSMIC_COMP)
+        .join(format!("v{}", VERSION_2))
+        .join(ENTRY_AUTOTILE);
+
+    assert!(autotile_path.exists());
+    assert!(autotile_behavior_path.exists());
+    assert!(autotile_v2_path.exists());
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args([
+            "reset",
+            "--force",
+            "--exclude",
+            &format!(
+                "{}/{{v{}/{{{},{}}},v{}/{}}}",
+                COSMIC_COMP,
+                VERSION_1,
+                ENTRY_AUTOTILE,
+                ENTRY_AUTOTILE_BEHAVIOR,
+                VERSION_2,
+                ENTRY_AUTOTILE
+            ),
+        ])
+        .assert()
+        .success();
+
+    assert!(autotile_path.exists());
+    assert!(autotile_behavior_path.exists());
+    assert!(autotile_v2_path.exists());
+}
+
+#[test]
+fn test_reset_command_with_exclude_with_wildcard() {
+    let temp_dir = TempDir::new().unwrap();
+    let config_home = temp_dir.path().to_str().unwrap();
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args([
+            "write",
+            "--version",
+            &VERSION_1.to_string(),
+            "--component",
+            COSMIC_COMP,
+            "--entry",
+            ENTRY_AUTOTILE,
+            VALUE_TRUE,
+        ])
+        .assert()
+        .success();
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args([
+            "write",
+            "--version",
+            &VERSION_1.to_string(),
+            "--component",
+            COSMIC_COMP,
+            "--entry",
+            ENTRY_AUTOTILE_BEHAVIOR,
+            VALUE_PER_WORKSPACE,
+        ])
+        .assert()
+        .success();
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args([
+            "write",
+            "--version",
+            &VERSION_2.to_string(),
+            "--component",
+            COSMIC_COMP,
+            "--entry",
+            ENTRY_AUTOTILE,
+            VALUE_TRUE,
+        ])
+        .assert()
+        .success();
+
+    let autotile_path = temp_dir
+        .path()
+        .join("cosmic")
+        .join(COSMIC_COMP)
+        .join(format!("v{}", VERSION_1))
+        .join(ENTRY_AUTOTILE);
+
+    let autotile_behavior_path = temp_dir
+        .path()
+        .join("cosmic")
+        .join(COSMIC_COMP)
+        .join(format!("v{}", VERSION_1))
+        .join(ENTRY_AUTOTILE_BEHAVIOR);
+
+    let autotile_v2_path = temp_dir
+        .path()
+        .join("cosmic")
+        .join(COSMIC_COMP)
+        .join(format!("v{}", VERSION_2))
+        .join(ENTRY_AUTOTILE);
+
+    assert!(autotile_path.exists());
+    assert!(autotile_behavior_path.exists());
+    assert!(autotile_v2_path.exists());
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args([
+            "reset",
+            "--force",
+            "--exclude",
+            &format!("{}/v{}/{}*", COSMIC_COMP, VERSION_1, ENTRY_AUTOTILE),
+        ])
+        .assert()
+        .success();
+
+    assert!(autotile_path.exists());
+    assert!(autotile_behavior_path.exists());
+    assert!(!autotile_v2_path.exists());
+}
+
+#[test]
+fn test_reset_command_with_exclude_with_brace_expansion_and_wildcard() {
+    let temp_dir = TempDir::new().unwrap();
+    let config_home = temp_dir.path().to_str().unwrap();
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args([
+            "write",
+            "--version",
+            &VERSION_1.to_string(),
+            "--component",
+            COSMIC_COMP,
+            "--entry",
+            ENTRY_AUTOTILE,
+            VALUE_TRUE,
+        ])
+        .assert()
+        .success();
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args([
+            "write",
+            "--version",
+            &VERSION_1.to_string(),
+            "--component",
+            COSMIC_COMP,
+            "--entry",
+            ENTRY_AUTOTILE_BEHAVIOR,
+            VALUE_PER_WORKSPACE,
+        ])
+        .assert()
+        .success();
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args([
+            "write",
+            "--version",
+            &VERSION_2.to_string(),
+            "--component",
+            COSMIC_COMP,
+            "--entry",
+            ENTRY_AUTOTILE,
+            VALUE_TRUE,
+        ])
+        .assert()
+        .success();
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args([
+            "write",
+            "--version",
+            &VERSION_1.to_string(),
+            "--component",
+            COSMIC_COMP,
+            "--entry",
+            ENTRY_XKB_CONFIG,
+            VALUE_XKB_CONFIG,
+        ])
+        .assert()
+        .success();
+
+    let autotile_path = temp_dir
+        .path()
+        .join("cosmic")
+        .join(COSMIC_COMP)
+        .join(format!("v{}", VERSION_1))
+        .join(ENTRY_AUTOTILE);
+
+    let autotile_behavior_path = temp_dir
+        .path()
+        .join("cosmic")
+        .join(COSMIC_COMP)
+        .join(format!("v{}", VERSION_1))
+        .join(ENTRY_AUTOTILE_BEHAVIOR);
+
+    let autotile_v2_path = temp_dir
+        .path()
+        .join("cosmic")
+        .join(COSMIC_COMP)
+        .join(format!("v{}", VERSION_2))
+        .join(ENTRY_AUTOTILE);
+
+    let xkb_config_path = temp_dir
+        .path()
+        .join("cosmic")
+        .join(COSMIC_COMP)
+        .join(format!("v{}", VERSION_1))
+        .join(ENTRY_XKB_CONFIG);
+
+    assert!(autotile_path.exists());
+    assert!(autotile_behavior_path.exists());
+    assert!(autotile_v2_path.exists());
+    assert!(xkb_config_path.exists());
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args([
+            "reset",
+            "--force",
+            "--exclude",
+            &format!(
+                "{}/{{v{}/{}*,v{}/{}*}}",
+                COSMIC_COMP, VERSION_1, ENTRY_AUTOTILE, VERSION_2, ENTRY_AUTOTILE
+            ),
+        ])
+        .assert()
+        .success();
+
+    assert!(autotile_path.exists());
+    assert!(autotile_behavior_path.exists());
+    assert!(autotile_v2_path.exists());
+    assert!(!xkb_config_path.exists())
 }

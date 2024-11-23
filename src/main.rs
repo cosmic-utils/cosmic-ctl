@@ -120,7 +120,7 @@ fn main() {
             entry,
             value,
         } => {
-            if !apply_configuration(component, version, entry, value) {
+            if !write_configuration(component, version, entry, value) {
                 println!("Doing nothing, entry already has this value.");
             } else {
                 println!("Configuration entry written successfully.");
@@ -157,7 +157,7 @@ fn main() {
 
             for entry in config_file.configurations {
                 for (key, value) in entry.entries {
-                    if !apply_configuration(&entry.component, &entry.version, &key, &value) {
+                    if !write_configuration(&entry.component, &entry.version, &key, &value) {
                         if *verbose {
                             println!(
                                 "Skipping {}/v{}/{} - value unchanged",
@@ -322,14 +322,6 @@ fn main() {
     }
 }
 
-fn check_existing_value(component: &str, version: &u64, entry: &str, new_value: &str) -> bool {
-    if let Some(current_value) = read_configuration(component, version, entry) {
-        return current_value == new_value;
-    }
-
-    false
-}
-
 fn read_configuration(component: &str, version: &u64, entry: &str) -> Option<String> {
     let path = get_config_path(component, version, entry);
 
@@ -340,12 +332,14 @@ fn read_configuration(component: &str, version: &u64, entry: &str) -> Option<Str
     }
 }
 
-fn apply_configuration(component: &str, version: &u64, entry: &str, value: &str) -> bool {
+fn write_configuration(component: &str, version: &u64, entry: &str, value: &str) -> bool {
     let path = get_config_path(component, version, entry);
     let unescaped_value = unescape(value).unwrap();
 
-    if check_existing_value(component, version, entry, &unescaped_value) {
-        return false;
+    if let Some(current_value) = read_configuration(component, version, entry) {
+        if current_value == unescaped_value {
+            return false;
+        }
     }
 
     fs::create_dir_all(path.parent().unwrap()).unwrap();

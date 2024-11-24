@@ -517,16 +517,12 @@ fn get_config_path(component: &str, version: &u64, entry: &str) -> PathBuf {
 }
 
 fn get_cosmic_configurations() -> PathBuf {
-    let config_home = get_configuration_home();
-
-    Path::new(&config_home).join("cosmic")
-}
-
-fn get_configuration_home() -> String {
-    env::var("XDG_CONFIG_HOME").unwrap_or_else(|_| {
+    let config_home = env::var("XDG_CONFIG_HOME").unwrap_or_else(|_| {
         let home = env::var("HOME").unwrap();
         format!("{}/.config", home)
-    })
+    });
+
+    Path::new(&config_home).join("cosmic")
 }
 
 fn split_string_respect_braces(input_string: Option<String>) -> Vec<String> {

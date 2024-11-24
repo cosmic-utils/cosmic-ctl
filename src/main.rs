@@ -278,7 +278,9 @@ fn main() {
                 .filter_map(|e| e.ok())
                 .filter(|e| e.path().is_file())
             {
-                if let Some((component, version, entry_name)) = parse_path(entry.path()) {
+                if let Some((component, version, entry_name)) =
+                    parse_configuration_path(entry.path())
+                {
                     if let Some(content) = read_configuration(&component, &version, &entry_name) {
                         if *verbose {
                             println!("Backing up: {}/v{}/{}", component, version, entry_name);
@@ -370,7 +372,9 @@ fn main() {
                 .filter_map(|e| e.ok())
                 .filter(|e| e.path().is_file())
             {
-                if let Some((component, version, entry_name)) = parse_path(entry.path()) {
+                if let Some((component, version, entry_name)) =
+                    parse_configuration_path(entry.path())
+                {
                     let relative_path = format!("{}/v{}/{}", component, version, entry_name);
                     let should_exclude = exclude_patterns
                         .iter()
@@ -424,7 +428,9 @@ fn main() {
                 .filter_map(|e| e.ok())
                 .filter(|e| e.path().is_file())
             {
-                if let Some((component, version, entry_name)) = parse_path(entry.path()) {
+                if let Some((component, version, entry_name)) =
+                    parse_configuration_path(entry.path())
+                {
                     if let Some(content) = read_configuration(&component, &version, &entry_name) {
                         if *verbose {
                             println!("Found: {}/v{}/{}", component, version, entry_name);
@@ -454,7 +460,7 @@ fn main() {
 }
 
 fn read_configuration(component: &str, version: &u64, entry: &str) -> Option<String> {
-    let path = get_config_path(component, version, entry);
+    let path = get_configuration_path(component, version, entry);
 
     if path.exists() {
         fs::read_to_string(path).ok()
@@ -464,7 +470,7 @@ fn read_configuration(component: &str, version: &u64, entry: &str) -> Option<Str
 }
 
 fn write_configuration(component: &str, version: &u64, entry: &str, value: &str) -> bool {
-    let path = get_config_path(component, version, entry);
+    let path = get_configuration_path(component, version, entry);
     let unescaped_value = unescape(value).unwrap();
 
     if let Some(current_value) = read_configuration(component, version, entry) {
@@ -480,7 +486,7 @@ fn write_configuration(component: &str, version: &u64, entry: &str, value: &str)
 }
 
 fn delete_configuration(component: &str, version: &u64, entry: &str) -> Result<(), Error> {
-    let path = get_config_path(component, version, entry);
+    let path = get_configuration_path(component, version, entry);
     if path.exists() {
         fs::remove_file(path)?;
         Ok(())
@@ -492,7 +498,7 @@ fn delete_configuration(component: &str, version: &u64, entry: &str) -> Result<(
     }
 }
 
-fn parse_path(path: &Path) -> Option<(String, u64, String)> {
+fn parse_configuration_path(path: &Path) -> Option<(String, u64, String)> {
     let parts: Vec<_> = path.iter().collect();
 
     if parts.len() < 4 {
@@ -507,7 +513,7 @@ fn parse_path(path: &Path) -> Option<(String, u64, String)> {
     Some((component, version, entry_name))
 }
 
-fn get_config_path(component: &str, version: &u64, entry: &str) -> PathBuf {
+fn get_configuration_path(component: &str, version: &u64, entry: &str) -> PathBuf {
     let cosmic_folder = get_cosmic_configurations();
 
     Path::new(&cosmic_folder)

@@ -279,18 +279,18 @@ fn main() {
                 .filter(|e| e.path().is_file())
             {
                 if let Some((component, version, entry_name)) = parse_path(entry.path()) {
-                    if *verbose {
-                        println!("Backing up: {}/v{}/{}", component, version, entry_name);
+                    if let Some(content) = read_configuration(&component, &version, &entry_name) {
+                        if *verbose {
+                            println!("Backing up: {}/v{}/{}", component, version, entry_name);
+                        }
+
+                        operations
+                            .entry((component.clone(), version))
+                            .or_insert_with(HashMap::new)
+                            .insert(entry_name, content);
+
+                        entry_count += 1;
                     }
-
-                    let content = fs::read_to_string(entry.path()).unwrap();
-
-                    operations
-                        .entry((component.clone(), version))
-                        .or_insert_with(HashMap::new)
-                        .insert(entry_name, content);
-
-                    entry_count += 1;
                 }
             }
 

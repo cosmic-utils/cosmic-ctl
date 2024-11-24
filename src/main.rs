@@ -286,7 +286,7 @@ fn main() {
 
                         operations
                             .entry((component.clone(), version))
-                            .or_insert_with(HashMap::new)
+                            .or_default()
                             .insert(entry_name, content);
 
                         entry_count += 1;

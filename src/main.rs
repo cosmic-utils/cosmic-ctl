@@ -11,7 +11,6 @@ use std::{
     io::{Error, Write},
     path::{Path, PathBuf},
 };
-use tabled::{settings::Style, Table, Tabled};
 use unescaper::unescape;
 use walkdir::WalkDir;
 
@@ -95,12 +94,6 @@ enum Commands {
         #[arg(long)]
         exclude: Option<String>,
     },
-    /// List all configuration entries.
-    List {
-        /// Show which entries are being listed.
-        #[arg(short, long)]
-        verbose: bool,
-    },
 }
 
 #[derive(Deserialize, Serialize)]
@@ -131,18 +124,6 @@ struct ConfigFile {
     #[serde(rename = "$schema")]
     schema: String,
     operations: Vec<Entry>,
-}
-
-#[derive(Tabled)]
-struct ConfigEntry {
-    #[tabled(rename = "Component")]
-    component: String,
-    #[tabled(rename = "Version")]
-    version: String,
-    #[tabled(rename = "Entry")]
-    entry: String,
-    #[tabled(rename = "Value")]
-    value: String,
 }
 
 fn main() {
@@ -413,48 +394,6 @@ fn main() {
                     eprintln!("Error: {}", error);
                 }
             }
-        }
-        Commands::List { verbose } => {
-            let cosmic_path = get_cosmic_configurations();
-            let mut entries = Vec::new();
-
-            if !cosmic_path.exists() {
-                println!("No configurations found.");
-                return;
-            }
-
-            for entry in WalkDir::new(cosmic_path)
-                .into_iter()
-                .filter_map(|e| e.ok())
-                .filter(|e| e.path().is_file())
-            {
-                if let Some((component, version, entry_name)) =
-                    parse_configuration_path(entry.path())
-                {
-                    if let Some(content) = read_configuration(&component, &version, &entry_name) {
-                        if *verbose {
-                            println!("Found: {}/v{}/{}", component, version, entry_name);
-                        }
-
-                        entries.push(ConfigEntry {
-                            component,
-                            version: format!("v{}", version),
-                            entry: entry_name,
-                            value: content,
-                        });
-                    }
-                }
-            }
-
-            if entries.is_empty() {
-                println!("No configurations found.");
-                return;
-            }
-
-            let mut table = Table::new(&entries);
-            table.with(Style::modern());
-            println!("{}", table);
-            println!("Total entries: {}", entries.len());
         }
     }
 }

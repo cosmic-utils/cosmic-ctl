@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     env, fs,
-    io::{Error, Write},
+    io::{Error, ErrorKind, Write},
     path::{Path, PathBuf},
 };
 use unescaper::unescape;
@@ -135,20 +135,18 @@ fn main() {
             version,
             entry,
             value,
-        } => {
-            if !write_configuration(component, version, entry, value) {
-                println!("Doing nothing, entry already has this value.");
-            } else {
-                println!("Configuration entry written successfully.");
-            }
-        }
+        } => match write_configuration(component, version, entry, value) {
+            Ok(true) => println!("Configuration entry written successfully."),
+            Ok(false) => println!("Doing nothing, entry already has this value."),
+            Err(e) => eprintln!("Error writing configuration: {}", e),
+        },
         Commands::Read {
             version,
             component,
             entry,
         } => match read_configuration(component, version, entry) {
-            Some(contents) => println!("{}", contents),
-            None => eprintln!("Error: Configuration entry does not exist."),
+            Ok(contents) => println!("{}", contents),
+            Err(e) => eprintln!("Error reading configuration: {}", e),
         },
         Commands::Delete {
             version,
@@ -177,35 +175,47 @@ fn main() {
                 match (entry.operation, entry.entries) {
                     (Operation::Write, EntryContent::WriteEntries(entries)) => {
                         for (key, value) in entries {
-                            if !write_configuration(&entry.component, &entry.version, &key, &value)
-                            {
-                                if *verbose {
-                                    println!(
-                                        "Skipping {}/v{}/{} - value unchanged",
-                                        entry.component, entry.version, key
-                                    );
+                            match write_configuration(
+                                &entry.component,
+                                &entry.version,
+                                &key,
+                                &value,
+                            ) {
+                                Ok(false) => {
+                                    if *verbose {
+                                        println!(
+                                            "Skipping {}/v{}/{} - value unchanged",
+                                            entry.component, entry.version, key
+                                        );
+                                    }
+                                    skipped += 1;
                                 }
-                                skipped += 1;
-                            } else {
-                                write_changes += 1;
+                                Ok(true) => write_changes += 1,
+                                Err(e) => {
+                                    eprintln!(
+                                        "Error writing {}/v{}/{}: {}",
+                                        entry.component, entry.version, key, e
+                                    );
+                                    skipped += 1;
+                                }
                             }
                         }
                     }
                     (Operation::Read, EntryContent::ReadDeleteEntries(keys)) => {
                         for key in keys {
                             match read_configuration(&entry.component, &entry.version, &key) {
-                                Some(content) => {
+                                Ok(content) => {
                                     println!(
                                         "{}/v{}/{}: {}",
                                         entry.component, entry.version, key, content
                                     );
                                     read_count += 1;
                                 }
-                                None => {
+                                Err(e) => {
                                     if *verbose {
                                         println!(
-                                            "Entry not found: {}/v{}/{}",
-                                            entry.component, entry.version, key
+                                            "Entry not found: {}/v{}/{}: {}",
+                                            entry.component, entry.version, key, e
                                         );
                                     }
                                     skipped += 1;
@@ -262,17 +272,27 @@ fn main() {
                 if let Some((component, version, entry_name)) =
                     parse_configuration_path(entry.path())
                 {
-                    if let Some(content) = read_configuration(&component, &version, &entry_name) {
-                        if *verbose {
-                            println!("Backing up: {}/v{}/{}", component, version, entry_name);
+                    match read_configuration(&component, &version, &entry_name) {
+                        Ok(content) => {
+                            if *verbose {
+                                println!("Backing up: {}/v{}/{}", component, version, entry_name);
+                            }
+
+                            operations
+                                .entry((component.clone(), version))
+                                .or_default()
+                                .insert(entry_name, content);
+
+                            entry_count += 1;
                         }
-
-                        operations
-                            .entry((component.clone(), version))
-                            .or_default()
-                            .insert(entry_name, content);
-
-                        entry_count += 1;
+                        Err(e) => {
+                            if *verbose {
+                                println!(
+                                    "Failed to backup {}/v{}/{}: {}",
+                                    component, version, entry_name, e
+                                );
+                            }
+                        }
                     }
                 }
             }
@@ -398,30 +418,56 @@ fn main() {
     }
 }
 
-fn read_configuration(component: &str, version: &u64, entry: &str) -> Option<String> {
+fn read_configuration(component: &str, version: &u64, entry: &str) -> Result<String, Error> {
     let path = get_configuration_path(component, version, entry);
 
     if path.exists() {
-        fs::read_to_string(path).ok()
+        fs::read_to_string(path)
     } else {
-        None
+        Err(Error::new(
+            ErrorKind::NotFound,
+            format!(
+                "Configuration entry not found: {}/v{}/{}",
+                component, version, entry
+            ),
+        ))
     }
 }
 
-fn write_configuration(component: &str, version: &u64, entry: &str, value: &str) -> bool {
+fn write_configuration(
+    component: &str,
+    version: &u64,
+    entry: &str,
+    value: &str,
+) -> Result<bool, Error> {
     let path = get_configuration_path(component, version, entry);
-    let unescaped_value = unescape(value).unwrap();
+    let unescaped_value = unescape(value).map_err(|e| {
+        Error::new(
+            ErrorKind::InvalidInput,
+            format!("Failed to unescape value: {}", e),
+        )
+    })?;
 
-    if let Some(current_value) = read_configuration(component, version, entry) {
+    if let Ok(current_value) = read_configuration(component, version, entry) {
         if current_value == unescaped_value {
-            return false;
+            return Ok(false);
         }
     }
 
-    fs::create_dir_all(path.parent().unwrap()).unwrap();
-    fs::write(path, unescaped_value).unwrap();
+    fs::create_dir_all(path.parent().unwrap_or_else(|| Path::new(""))).map_err(|e| {
+        Error::new(
+            ErrorKind::Other,
+            format!("Failed to create directory structure: {}", e),
+        )
+    })?;
+    fs::write(&path, unescaped_value).map_err(|e| {
+        Error::new(
+            ErrorKind::Other,
+            format!("Failed to write configuration to {}: {}", path.display(), e),
+        )
+    })?;
 
-    true
+    Ok(true)
 }
 
 fn delete_configuration(component: &str, version: &u64, entry: &str) -> Result<(), Error> {
@@ -431,7 +477,7 @@ fn delete_configuration(component: &str, version: &u64, entry: &str) -> Result<(
         Ok(())
     } else {
         Err(Error::new(
-            std::io::ErrorKind::NotFound,
+            ErrorKind::NotFound,
             "Configuration entry does not exist",
         ))
     }

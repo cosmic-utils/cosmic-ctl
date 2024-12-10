@@ -1,17 +1,21 @@
+mod config;
 #[cfg(test)]
 mod tests;
+mod utils;
+
+use crate::{
+    config::{
+        delete_configuration, get_cosmic_configurations, parse_configuration_path,
+        read_configuration, write_configuration,
+    },
+    utils::split_string_respect_braces,
+};
 
 use bracoxide::explode;
 use clap::{Parser, Subcommand};
 use glob::Pattern;
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::HashMap,
-    env, fs,
-    io::{Error, ErrorKind, Write},
-    path::{Path, PathBuf},
-};
-use unescaper::unescape;
+use std::{collections::HashMap, fs, io::Write, path::PathBuf};
 use walkdir::WalkDir;
 
 /// CLI for COSMIC Desktop configuration management
@@ -20,7 +24,7 @@ use walkdir::WalkDir;
 #[command(propagate_version = true)]
 struct Cli {
     #[command(subcommand)]
-    command: Commands,
+    command: Option<Commands>,
 }
 
 #[derive(Subcommand)]
@@ -130,33 +134,33 @@ fn main() {
     let cli: Cli = Cli::parse();
 
     match &cli.command {
-        Commands::Write {
+        Some(Commands::Write {
             component,
             version,
             entry,
             value,
-        } => match write_configuration(component, version, entry, value) {
+        }) => match write_configuration(component, version, entry, value) {
             Ok(true) => println!("Configuration entry written successfully."),
             Ok(false) => println!("Doing nothing, entry already has this value."),
             Err(e) => eprintln!("Error writing configuration: {}", e),
         },
-        Commands::Read {
+        Some(Commands::Read {
             version,
             component,
             entry,
-        } => match read_configuration(component, version, entry) {
+        }) => match read_configuration(component, version, entry) {
             Ok(contents) => println!("{}", contents),
             Err(e) => eprintln!("Error reading configuration: {}", e),
         },
-        Commands::Delete {
+        Some(Commands::Delete {
             version,
             component,
             entry,
-        } => match delete_configuration(component, version, entry) {
+        }) => match delete_configuration(component, version, entry) {
             Ok(()) => println!("Configuration entry deleted successfully."),
             Err(e) => eprintln!("Error: {}", e),
         },
-        Commands::Apply { file, verbose } => {
+        Some(Commands::Apply { file, verbose }) => {
             if file.extension().and_then(|s| s.to_str()) != Some("json") {
                 eprintln!("Error: The file is not in JSON format.");
                 return;
@@ -259,7 +263,7 @@ fn main() {
                 write_changes, read_count, delete_count, skipped
             );
         }
-        Commands::Backup { file, verbose } => {
+        Some(Commands::Backup { file, verbose }) => {
             let cosmic_path = get_cosmic_configurations();
             let mut operations: HashMap<(String, u64), HashMap<String, String>> = HashMap::new();
             let mut entry_count = 0;
@@ -319,11 +323,11 @@ fn main() {
                 entry_count
             );
         }
-        Commands::Reset {
+        Some(Commands::Reset {
             force,
             verbose,
             exclude,
-        } => {
+        }) => {
             if !*force {
                 print!("Are you sure you want to delete all configuration entries? This action cannot be undone. [y/N] ");
                 std::io::stdout().flush().unwrap();
@@ -415,140 +419,6 @@ fn main() {
                 }
             }
         }
-    }
-}
-
-fn read_configuration(component: &str, version: &u64, entry: &str) -> Result<String, Error> {
-    let path = get_configuration_path(component, version, entry);
-
-    if path.exists() {
-        fs::read_to_string(path)
-    } else {
-        Err(Error::new(
-            ErrorKind::NotFound,
-            format!(
-                "Configuration entry not found: {}/v{}/{}",
-                component, version, entry
-            ),
-        ))
-    }
-}
-
-fn write_configuration(
-    component: &str,
-    version: &u64,
-    entry: &str,
-    value: &str,
-) -> Result<bool, Error> {
-    let path = get_configuration_path(component, version, entry);
-    let unescaped_value = unescape(value).map_err(|e| {
-        Error::new(
-            ErrorKind::InvalidInput,
-            format!("Failed to unescape value: {}", e),
-        )
-    })?;
-
-    if let Ok(current_value) = read_configuration(component, version, entry) {
-        if current_value == unescaped_value {
-            return Ok(false);
-        }
-    }
-
-    fs::create_dir_all(path.parent().unwrap_or_else(|| Path::new(""))).map_err(|e| {
-        Error::new(
-            ErrorKind::Other,
-            format!("Failed to create directory structure: {}", e),
-        )
-    })?;
-    fs::write(&path, unescaped_value).map_err(|e| {
-        Error::new(
-            ErrorKind::Other,
-            format!("Failed to write configuration to {}: {}", path.display(), e),
-        )
-    })?;
-
-    Ok(true)
-}
-
-fn delete_configuration(component: &str, version: &u64, entry: &str) -> Result<(), Error> {
-    let path = get_configuration_path(component, version, entry);
-    if path.exists() {
-        fs::remove_file(path)?;
-        Ok(())
-    } else {
-        Err(Error::new(
-            ErrorKind::NotFound,
-            "Configuration entry does not exist",
-        ))
-    }
-}
-
-fn parse_configuration_path(path: &Path) -> Option<(String, u64, String)> {
-    let parts: Vec<_> = path.iter().collect();
-
-    if parts.len() < 4 {
-        return None;
-    }
-
-    let entry_name = parts.last()?.to_str()?.to_string();
-    let version_str = parts.get(parts.len() - 2)?.to_str()?;
-    let version = version_str.strip_prefix('v')?.parse().ok()?;
-    let component = parts.get(parts.len() - 3)?.to_str()?.to_string();
-
-    Some((component, version, entry_name))
-}
-
-fn get_configuration_path(component: &str, version: &u64, entry: &str) -> PathBuf {
-    let cosmic_folder = get_cosmic_configurations();
-
-    Path::new(&cosmic_folder)
-        .join(component)
-        .join(format!("v{}", version))
-        .join(entry)
-}
-
-fn get_cosmic_configurations() -> PathBuf {
-    let config_home = env::var("XDG_CONFIG_HOME").unwrap_or_else(|_| {
-        let home = env::var("HOME").unwrap();
-        format!("{}/.config", home)
-    });
-
-    Path::new(&config_home).join("cosmic")
-}
-
-fn split_string_respect_braces(input_string: Option<String>) -> Vec<String> {
-    match input_string {
-        None => Vec::new(),
-        Some(string) => {
-            let mut result = Vec::new();
-            let mut current_string = String::new();
-            let mut brace_count = 0;
-
-            for character in string.chars() {
-                match character {
-                    '{' => {
-                        brace_count += 1;
-                        current_string.push(character);
-                    }
-                    '}' => {
-                        brace_count -= 1;
-                        current_string.push(character);
-                    }
-                    ',' if brace_count == 0 => {
-                        if !current_string.is_empty() {
-                            result.push(current_string.trim().to_string());
-                            current_string = String::new();
-                        }
-                    }
-                    _ => current_string.push(character),
-                }
-            }
-
-            if !current_string.is_empty() {
-                result.push(current_string.trim().to_string());
-            }
-
-            result
-        }
+        None => todo!(),
     }
 }

@@ -34,4 +34,3 @@ pub fn split_string_respect_braces(input_string: Option<String>) -> Vec<String> 
         }
     }
 }
-

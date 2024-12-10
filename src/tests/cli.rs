@@ -59,7 +59,7 @@ fn test_write_command() {
         ])
         .assert()
         .success()
-        .stdout("Doing nothing, entry already has this value.\n");
+        .stdout("Doing nothing. Configuration entry already has the same value.\n");
 
     let config_path = temp_dir
         .path()
@@ -500,8 +500,7 @@ fn test_reset_command_empty_config() {
         .env("XDG_CONFIG_HOME", config_home)
         .args(["reset", "--force"])
         .assert()
-        .success()
-        .stdout("No configurations to delete.\n");
+        .stderr("Error: No configurations to delete.\n");
 }
 
 #[test]

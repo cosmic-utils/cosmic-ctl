@@ -6,15 +6,15 @@ use std::io::Error;
 pub struct WriteCommand {
     /// The configuration version of the component.
     #[arg(short, long, default_value_t = 1)]
-    pub version: u64,
+    version: u64,
     /// The component to configure (e.g., 'com.system76.CosmicComp').
     #[arg(short, long)]
-    pub component: String,
+    component: String,
     /// The specific configuration entry to modify (e.g., 'autotile').
     #[arg(short, long)]
-    pub entry: String,
+    entry: String,
     /// The value to assign to the configuration entry. (e.g., 'true').
-    pub value: String,
+    value: String,
 }
 
 impl Command for WriteCommand {

@@ -18,8 +18,13 @@ fn get_base_strategy() -> Result<Xdg, Error> {
     })
 }
 
-pub fn read_configuration(component: &str, version: &u64, entry: &str) -> Result<String, Error> {
-    let path = get_configuration_path(component, version, entry)?;
+pub fn read_configuration(
+    component: &str,
+    version: &u64,
+    entry: &str,
+    xdg_dir: &str,
+) -> Result<String, Error> {
+    let path = get_configuration_path(component, version, entry, xdg_dir)?;
 
     if path.exists() {
         fs::read_to_string(path)
@@ -39,8 +44,9 @@ pub fn write_configuration(
     version: &u64,
     entry: &str,
     value: &str,
+    xdg_dir: &str,
 ) -> Result<bool, Error> {
-    let path = get_configuration_path(component, version, entry)?;
+    let path = get_configuration_path(component, version, entry, xdg_dir)?;
     let unescaped_value = unescape(value).map_err(|e| {
         Error::new(
             ErrorKind::InvalidInput,
@@ -48,7 +54,7 @@ pub fn write_configuration(
         )
     })?;
 
-    if let Ok(current_value) = read_configuration(component, version, entry) {
+    if let Ok(current_value) = read_configuration(component, version, entry, xdg_dir) {
         if current_value == unescaped_value {
             return Ok(false);
         }
@@ -70,8 +76,13 @@ pub fn write_configuration(
     Ok(true)
 }
 
-pub fn delete_configuration(component: &str, version: &u64, entry: &str) -> Result<(), Error> {
-    let path = get_configuration_path(component, version, entry)?;
+pub fn delete_configuration(
+    component: &str,
+    version: &u64,
+    entry: &str,
+    xdg_dir: &str,
+) -> Result<(), Error> {
+    let path = get_configuration_path(component, version, entry, xdg_dir)?;
     if path.exists() {
         fs::remove_file(path)?;
         Ok(())
@@ -98,8 +109,13 @@ pub fn parse_configuration_path(path: &Path) -> Option<(String, u64, String)> {
     Some((component, version, entry_name))
 }
 
-fn get_configuration_path(component: &str, version: &u64, entry: &str) -> Result<PathBuf, Error> {
-    let cosmic_folder = get_cosmic_configurations()?;
+fn get_configuration_path(
+    component: &str,
+    version: &u64,
+    entry: &str,
+    xdg_dir: &str,
+) -> Result<PathBuf, Error> {
+    let cosmic_folder = get_cosmic_configurations(xdg_dir)?;
 
     Ok(cosmic_folder
         .join(component)
@@ -107,8 +123,25 @@ fn get_configuration_path(component: &str, version: &u64, entry: &str) -> Result
         .join(entry))
 }
 
-pub fn get_cosmic_configurations() -> Result<PathBuf, Error> {
-    let strategy = get_base_strategy()?;
-    let config_dir = strategy.config_dir().join("cosmic");
+pub fn get_cosmic_configurations(xdg_dir: &str) -> Result<PathBuf, Error> {
+    let config_dir = get_xdg_dir_path(xdg_dir)?.join("cosmic");
     Ok(config_dir)
+}
+
+pub fn get_xdg_dir_path(xdg_dir: &str) -> Result<PathBuf, Error> {
+    match xdg_dir.to_lowercase().as_str() {
+        "config" => Ok(get_base_strategy()?.config_dir()),
+        "data" => Ok(get_base_strategy()?.data_dir()),
+        "cache" => Ok(get_base_strategy()?.cache_dir()),
+        "state" => get_base_strategy()?
+            .state_dir()
+            .ok_or_else(|| Error::new(ErrorKind::NotFound, "State directory is not available")),
+        "runtime" => get_base_strategy()?
+            .runtime_dir()
+            .ok_or_else(|| Error::new(ErrorKind::NotFound, "Runtime directory is not available")),
+        _ => Err(Error::new(
+            ErrorKind::InvalidInput,
+            format!("Invalid XDG directory: {}", xdg_dir),
+        )),
+    }
 }

@@ -42,7 +42,13 @@ impl Command for ApplyCommand {
             match (entry.operation, entry.entries) {
                 (Operation::Write, EntryContent::WriteEntries(entries)) => {
                     for (key, value) in entries {
-                        match write_configuration(&entry.component, &entry.version, &key, &value) {
+                        match write_configuration(
+                            &entry.component,
+                            &entry.version,
+                            &key,
+                            &value,
+                            &entry.xdg_directory,
+                        ) {
                             Ok(false) => {
                                 if self.verbose {
                                     println!(
@@ -65,7 +71,12 @@ impl Command for ApplyCommand {
                 }
                 (Operation::Read, EntryContent::ReadDeleteEntries(keys)) => {
                     for key in keys {
-                        match read_configuration(&entry.component, &entry.version, &key) {
+                        match read_configuration(
+                            &entry.component,
+                            &entry.version,
+                            &key,
+                            &entry.xdg_directory,
+                        ) {
                             Ok(content) => {
                                 println!(
                                     "{}/v{}/{}: {}",
@@ -84,7 +95,12 @@ impl Command for ApplyCommand {
                 }
                 (Operation::Delete, EntryContent::ReadDeleteEntries(keys)) => {
                     for key in keys {
-                        match delete_configuration(&entry.component, &entry.version, &key) {
+                        match delete_configuration(
+                            &entry.component,
+                            &entry.version,
+                            &key,
+                            &entry.xdg_directory,
+                        ) {
                             Ok(()) => {
                                 if self.verbose {
                                     println!(

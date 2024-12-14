@@ -15,6 +15,9 @@ const ENTRY_AUTOTILE: &str = "autotile";
 const ENTRY_AUTOTILE_BEHAVIOR: &str = "autotile_behavior";
 const ENTRY_XKB_CONFIG: &str = "xkb_config";
 
+const XDG_CONFIG_DIR: &str = "config";
+const XDG_DATA_DIR: &str = "data";
+
 const VERSION_1: i32 = 1;
 const VERSION_2: i32 = 2;
 
@@ -169,6 +172,7 @@ fn test_apply_command() {
                 "component": COSMIC_COMP,
                 "version": VERSION_1,
                 "operation": WRITE_OPERATION,
+                "xdg_directory": XDG_CONFIG_DIR,
                 "entries": {
                     ENTRY_AUTOTILE: VALUE_TRUE,
                     ENTRY_AUTOTILE_BEHAVIOR: VALUE_PER_WORKSPACE
@@ -229,6 +233,7 @@ fn test_apply_command_verbose() {
                 "component": COSMIC_COMP,
                 "version": VERSION_1,
                 "operation": WRITE_OPERATION,
+                "xdg_directory": XDG_CONFIG_DIR,
                 "entries": {
                     ENTRY_AUTOTILE: VALUE_TRUE,
                     ENTRY_AUTOTILE_BEHAVIOR: VALUE_PER_WORKSPACE
@@ -325,7 +330,7 @@ fn test_backup_command() {
         .arg(&backup_file)
         .assert()
         .success()
-        .stdout("Backup completed successfully. 1 entries backed up.\n");
+        .stdout("Backup completed successfully. 1 total entries backed up.\n");
 
     assert!(backup_file.exists());
 
@@ -366,8 +371,8 @@ fn test_backup_command_verbose() {
         .assert()
         .success()
         .stdout(format!(
-            "Backing up: {}/v{}/{}\nBackup completed successfully. 1 entries backed up.\n",
-            COSMIC_COMP, VERSION_1, ENTRY_AUTOTILE
+            "Backing up [{}]: {}/v{}/{}\nCompleted backup for {} directory: 1 entries\nCompleted backup for {} directory: 0 entries\nBackup completed successfully. 1 total entries backed up.\n",
+            XDG_CONFIG_DIR, COSMIC_COMP, VERSION_1, ENTRY_AUTOTILE, XDG_CONFIG_DIR, XDG_DATA_DIR
         ));
 
     assert!(backup_file.exists());
@@ -482,8 +487,11 @@ fn test_reset_command_verbose() {
         .assert()
         .success()
         .stdout(format!(
-            "Deleting: {}\nSuccessfully deleted 1 configuration entries.\n",
-            config_path.display()
+            "Deleting [{}]: {}\nCompleted reset for {} directory: 1 entries deleted\nNo configuration entries found in {}.\nSuccessfully deleted 1 configuration entries.\n",
+            XDG_CONFIG_DIR,
+            config_path.display(),
+            XDG_CONFIG_DIR,
+            XDG_DATA_DIR
         ));
 
     assert!(!config_path.exists());
@@ -500,7 +508,8 @@ fn test_reset_command_empty_config() {
         .env("XDG_CONFIG_HOME", config_home)
         .args(["reset", "--force"])
         .assert()
-        .stderr("Error: No configurations to delete.\n");
+        .success()
+        .stdout("Successfully deleted 0 configuration entries.\n");
 }
 
 #[test]

@@ -13,13 +13,16 @@ pub struct ReadCommand {
     /// The specific configuration entry to modify (e.g., 'autotile').
     #[arg(short, long)]
     entry: String,
+    /// The XDG directory to use (e.g., 'config', 'cache', 'data').
+    #[arg(short, long, default_value = "config")]
+    xdg_dir: String,
 }
 
 impl Command for ReadCommand {
     type Err = Error;
 
     fn execute(&self) -> Result<(), Self::Err> {
-        match read_configuration(&self.component, &self.version, &self.entry) {
+        match read_configuration(&self.component, &self.version, &self.entry, &self.xdg_dir) {
             Ok(value) => {
                 println!("{}", value);
                 Ok(())

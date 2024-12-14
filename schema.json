@@ -21,6 +21,16 @@
               "delete"
             ]
           },
+          "xdg_directory": {
+            "type": "string",
+            "enum": [
+              "config",
+              "data",
+              "cache",
+              "runtime",
+              "state"
+            ]
+          },
           "entries": {
             "oneOf": [
               {

@@ -22,6 +22,7 @@ pub struct Entry {
     pub version: u64,
     pub operation: Operation,
     pub entries: EntryContent,
+    pub xdg_directory: String,
 }
 
 #[derive(Deserialize, Serialize)]

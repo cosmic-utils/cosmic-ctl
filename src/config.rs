@@ -1,12 +1,25 @@
+use etcetera::{
+    base_strategy::{BaseStrategy, Xdg},
+    choose_base_strategy,
+};
 use std::{
-    env, fs,
+    fs,
     io::{Error, ErrorKind},
     path::{Path, PathBuf},
 };
 use unescaper::unescape;
 
+fn get_base_strategy() -> Result<Xdg, Error> {
+    choose_base_strategy().map_err(|e| {
+        Error::new(
+            ErrorKind::Other,
+            format!("Failed to determine base strategy: {}", e),
+        )
+    })
+}
+
 pub fn read_configuration(component: &str, version: &u64, entry: &str) -> Result<String, Error> {
-    let path = get_configuration_path(component, version, entry);
+    let path = get_configuration_path(component, version, entry)?;
 
     if path.exists() {
         fs::read_to_string(path)
@@ -27,7 +40,7 @@ pub fn write_configuration(
     entry: &str,
     value: &str,
 ) -> Result<bool, Error> {
-    let path = get_configuration_path(component, version, entry);
+    let path = get_configuration_path(component, version, entry)?;
     let unescaped_value = unescape(value).map_err(|e| {
         Error::new(
             ErrorKind::InvalidInput,
@@ -58,7 +71,7 @@ pub fn write_configuration(
 }
 
 pub fn delete_configuration(component: &str, version: &u64, entry: &str) -> Result<(), Error> {
-    let path = get_configuration_path(component, version, entry);
+    let path = get_configuration_path(component, version, entry)?;
     if path.exists() {
         fs::remove_file(path)?;
         Ok(())
@@ -85,20 +98,17 @@ pub fn parse_configuration_path(path: &Path) -> Option<(String, u64, String)> {
     Some((component, version, entry_name))
 }
 
-fn get_configuration_path(component: &str, version: &u64, entry: &str) -> PathBuf {
-    let cosmic_folder = get_cosmic_configurations();
+fn get_configuration_path(component: &str, version: &u64, entry: &str) -> Result<PathBuf, Error> {
+    let cosmic_folder = get_cosmic_configurations()?;
 
-    Path::new(&cosmic_folder)
+    Ok(cosmic_folder
         .join(component)
         .join(format!("v{}", version))
-        .join(entry)
+        .join(entry))
 }
 
-pub fn get_cosmic_configurations() -> PathBuf {
-    let config_home = env::var("XDG_CONFIG_HOME").unwrap_or_else(|_| {
-        let home = env::var("HOME").unwrap();
-        format!("{}/.config", home)
-    });
-
-    Path::new(&config_home).join("cosmic")
+pub fn get_cosmic_configurations() -> Result<PathBuf, Error> {
+    let strategy = get_base_strategy()?;
+    let config_dir = strategy.config_dir().join("cosmic");
+    Ok(config_dir)
 }

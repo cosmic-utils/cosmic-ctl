@@ -75,10 +75,7 @@ impl Command for ApplyCommand {
                             }
                             Err(e) => {
                                 if self.verbose {
-                                    println!(
-                                        "Entry not found: {}/v{}/{}: {}",
-                                        entry.component, entry.version, key, e
-                                    );
+                                    println!("{}", e);
                                 }
                                 skipped += 1;
                             }

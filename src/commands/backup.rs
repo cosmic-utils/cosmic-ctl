@@ -20,7 +20,7 @@ impl Command for BackupCommand {
     type Err = Error;
 
     fn execute(&self) -> Result<(), Self::Err> {
-        let cosmic_path = get_cosmic_configurations();
+        let cosmic_path = get_cosmic_configurations()?;
         let mut operations: HashMap<(String, u64), HashMap<String, String>> = HashMap::new();
         let mut entry_count = 0;
 

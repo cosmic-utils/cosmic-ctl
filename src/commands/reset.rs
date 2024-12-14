@@ -39,7 +39,7 @@ impl Command for ResetCommand {
             }
         }
 
-        let cosmic_path = get_cosmic_configurations();
+        let cosmic_path = get_cosmic_configurations()?;
         let mut deleted_count = 0;
         let mut errors = Vec::new();
 

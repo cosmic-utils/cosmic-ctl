@@ -16,7 +16,7 @@ rustPlatform.buildRustPackage {
     path = ./.;
   };
 
-  cargoHash = "sha256-kN0q6/o3ASSnx4GAb9wce0a3JP7PwC20iRG0jarr7NA=";
+  cargoHash = "sha256-Nrg7NOAUrVQcwBz7nV3hILRYHr1dprQ5VJj2u7Zf3Q0=";
 
   doInstallCheck = true;
   nativeInstallCheckInputs = [ versionCheckHook ];

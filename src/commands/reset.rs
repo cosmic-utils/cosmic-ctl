@@ -21,7 +21,7 @@ pub struct ResetCommand {
     #[arg(long)]
     exclude: Option<String>,
     /// The XDG directories to backup (comma-separated) (e.g., 'config,cache,data').
-    #[arg(short, long, value_delimiter = ',', default_value = "config,data")]
+    #[arg(short, long, value_delimiter = ',', default_value = "config,state")]
     xdg_dirs: Vec<String>,
 }
 

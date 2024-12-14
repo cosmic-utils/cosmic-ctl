@@ -16,7 +16,7 @@ const ENTRY_AUTOTILE_BEHAVIOR: &str = "autotile_behavior";
 const ENTRY_XKB_CONFIG: &str = "xkb_config";
 
 const XDG_CONFIG_DIR: &str = "config";
-const XDG_DATA_DIR: &str = "data";
+const XDG_STATE_DIR: &str = "state";
 
 const VERSION_1: i32 = 1;
 const VERSION_2: i32 = 2;
@@ -372,7 +372,7 @@ fn test_backup_command_verbose() {
         .success()
         .stdout(format!(
             "Backing up [{}]: {}/v{}/{}\nCompleted backup for {} directory: 1 entries\nCompleted backup for {} directory: 0 entries\nBackup completed successfully. 1 total entries backed up.\n",
-            XDG_CONFIG_DIR, COSMIC_COMP, VERSION_1, ENTRY_AUTOTILE, XDG_CONFIG_DIR, XDG_DATA_DIR
+            XDG_CONFIG_DIR, COSMIC_COMP, VERSION_1, ENTRY_AUTOTILE, XDG_CONFIG_DIR, XDG_STATE_DIR
         ));
 
     assert!(backup_file.exists());
@@ -491,7 +491,7 @@ fn test_reset_command_verbose() {
             XDG_CONFIG_DIR,
             config_path.display(),
             XDG_CONFIG_DIR,
-            XDG_DATA_DIR
+            XDG_STATE_DIR
         ));
 
     assert!(!config_path.exists());

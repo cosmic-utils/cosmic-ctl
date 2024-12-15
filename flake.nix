@@ -14,20 +14,33 @@
       ];
 
       forAllSystems =
-        function:
-        inputs.nixpkgs.lib.genAttrs supportedSystems (
-          system: function inputs.nixpkgs.legacyPackages.${system}
+        f:
+        inputs.nixpkgs.lib.listToAttrs (
+          map (system: {
+            name = system;
+            value = f {
+              inherit system;
+              pkgs = import inputs.nixpkgs { inherit system; };
+            };
+          }) supportedSystems
         );
     in
     {
-      devShells = forAllSystems (pkgs: {
-        default = import ./shell.nix { inherit pkgs; };
-      });
+      devShells = forAllSystems (
+        { pkgs, ... }:
+        {
+          default = import ./shell.nix { inherit pkgs; };
+        }
+      );
 
-      formatter = forAllSystems (pkgs: pkgs.treefmt);
+      formatter = forAllSystems ({ pkgs, ... }: pkgs.treefmt);
 
-      packages = forAllSystems (pkgs: {
-        default = pkgs.callPackage ./. { };
-      });
+      packages = forAllSystems (
+        { pkgs, system }:
+        {
+          default = inputs.self.packages.${system}.cosmic-ctl;
+          cosmic-ctl = import ./. { inherit pkgs; };
+        }
+      );
     };
 }

@@ -14,19 +14,18 @@ use clap::Parser;
 #[command(propagate_version = true)]
 struct Cli {
     #[command(subcommand)]
-    command: Option<Commands>,
+    command: Commands,
 }
 
 fn main() {
     let cli = Cli::parse();
 
     match cli.command {
-        Some(cmd) => {
+        cmd => {
             if let Err(e) = cmd.execute() {
                 eprintln!("Error: {}", e);
                 std::process::exit(1);
             }
         }
-        None => todo!(),
     }
 }

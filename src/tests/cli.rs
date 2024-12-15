@@ -166,7 +166,7 @@ fn test_apply_command() {
     let config_home = temp_dir.path().to_str().unwrap();
 
     let config_json = json!({
-        "$schema": "https://raw.githubusercontent.com/HeitorAugustoLN/cosmic-ctl/refs/heads/main/schema.json",
+        "$schema": "https://raw.githubusercontent.com/cosmic-utils/cosmic-ctl/refs/heads/main/schema.json",
         "operations": [
             {
                 "component": COSMIC_COMP,
@@ -227,7 +227,7 @@ fn test_apply_command_verbose() {
     let config_home = temp_dir.path().to_str().unwrap();
 
     let config_json = json!({
-        "$schema": "https://raw.githubusercontent.com/HeitorAugustoLN/cosmic-ctl/refs/heads/main/schema.json",
+        "$schema": "https://raw.githubusercontent.com/cosmic-utils/cosmic-ctl/refs/heads/main/schema.json",
         "operations": [
             {
                 "component": COSMIC_COMP,

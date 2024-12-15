@@ -24,8 +24,8 @@ rustPlatform.buildRustPackage {
 
   meta = {
     description = "CLI for COSMIC Desktop configuration management";
-    changelog = "https://github.com/HeitorAugustoLN/cosmic-ctl/releases/tag/v${version}";
-    homepage = "https://github.com/HeitorAugustoLN/cosmic-ctl";
+    changelog = "https://github.com/cosmic-utils/cosmic-ctl/releases/tag/v${version}";
+    homepage = "https://github.com/cosmic-utils/cosmic-ctl";
     license = lib.licenses.gpl3Only;
     maintainers = with lib.maintainers; [ HeitorAugustoLN ];
     mainProgram = "cosmic-ctl";

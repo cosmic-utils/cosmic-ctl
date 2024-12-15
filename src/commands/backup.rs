@@ -90,7 +90,7 @@ impl Command for BackupCommand {
         }
 
         let backup_data = ConfigFile {
-            schema: "https://raw.githubusercontent.com/HeitorAugustoLN/cosmic-ctl/refs/heads/main/schema.json".to_string(),
+            schema: "https://raw.githubusercontent.com/cosmic-utils/cosmic-ctl/refs/heads/main/schema.json".to_string(),
             operations: all_operations,
         };
 

@@ -3,13 +3,13 @@ name = "cosmic-ctl"
 description = "CLI for COSMIC Desktop configuration management"
 version = "1.0.0"
 authors = ["Heitor Augusto <IAm.HeitorALN@proton.me>"]
-homepage = "https://github.com/HeitorAugustoLN/cosmic-ctl"
-repository = "https://github.com/HeitorAugustoLN/cosmic-ctl"
+homepage = "https://github.com/cosmic-utils/cosmic-ctl"
+repository = "https://github.com/cosmic-utils/cosmic-ctl"
 license = "GPL-3.0-only"
 edition = "2021"
 keywords = ["cli", "cosmic", "configuration", "management"]
 categories = ["command-line-utilities"]
-documentation = "https://github.com/HeitorAugustoLN/cosmic-ctl/wiki"
+documentation = "https://github.com/cosmic-utils/cosmic-ctl/wiki"
 readme = "README.md"
 
 [dependencies]

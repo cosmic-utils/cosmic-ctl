@@ -1,0 +1,47 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+  build-release:
+    runs-on: ubuntu-latest
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created }}
+    strategy:
+      matrix:
+        target:
+          - aarch64-unknown-linux-gnu
+          - x86_64-unknown-linux-gnu
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install cross-compilers
+        run: |
+          sudo apt update
+          sudo apt install -y gcc-aarch64-linux-gnu
+      - name: Build binary
+        run: |
+          cargo build --release --target ${{ matrix.target }}
+      - name: Package binary
+        run: |
+          cd target/${{ matrix.target }}/release
+          tar czvf ../../../${{ github.event.repository.name }}-${{ needs.release-please.outputs.tag_name }}-${{ matrix.target }}.tar.gz *
+      - name: Upload binary
+        run: gh release upload ${{ needs.release-please.outputs.tag_name }} ${github.event.repository.name}-${{ needs.release-please.outputs.tag_name }}-${{ matrix.target }}.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -3,7 +3,8 @@ name: Release
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 permissions:
   contents: write
@@ -24,9 +25,15 @@ jobs:
     if: ${{ needs.release-please.outputs.release_created }}
     strategy:
       matrix:
-        target:
-          - aarch64-unknown-linux-gnu
-          - x86_64-unknown-linux-gnu
+        include:
+          - build: linux
+            os: ubuntu-latest
+            rust: stable
+            target: x86_64-unknown-linux-gnu
+          - build: aarch64
+            os: ubuntu-latest
+            rust: stable
+            target: aarch64-unknown-linux-gnu
     steps:
       - name: Checkout
         uses: actions/checkout@v4

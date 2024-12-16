@@ -51,6 +51,6 @@ jobs:
           cd target/${{ matrix.target }}/release
           tar czvf ../../../${{ github.event.repository.name }}-${{ needs.release-please.outputs.tag_name }}-${{ matrix.target }}.tar.gz *
       - name: Upload binary
-        run: gh release upload ${{ needs.release-please.outputs.tag_name }} ${github.event.repository.name}-${{ needs.release-please.outputs.tag_name }}-${{ matrix.target }}.tar.gz
+        run: gh release upload ${{ needs.release-please.outputs.tag_name }} ${{ github.event.repository.name }}-${{ needs.release-please.outputs.tag_name }}-${{ matrix.target }}.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

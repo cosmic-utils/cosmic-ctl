@@ -13,7 +13,7 @@ documentation = "https://github.com/cosmic-utils/cosmic-ctl/wiki"
 readme = "README.md"
 
 [dependencies]
-atomicwrites = { git = "https://github.com/jackpot51/rust-atomicwrites" }
+atomicwrites = { git = "https://github.com/jackpot51/rust-atomicwrites", version = "0.4.2" }
 bracoxide = "0.1.4"
 clap = { version = "4.5.21", features = ["derive"] }
 etcetera = "0.8.0"

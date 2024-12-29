@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/cosmic-utils/cosmic-ctl/compare/v1.0.0...v1.1.0) (2024-12-29)
+
+
+### Features
+
+* **config:** use atomic writes for safer configuration writing ([12e48f4](https://github.com/cosmic-utils/cosmic-ctl/commit/12e48f412e420b2e59cf97684c4088c61fc18e8e))
+
 ## 1.0.0 (2024-12-16)
 
 

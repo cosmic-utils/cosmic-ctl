@@ -10,7 +10,7 @@ pkgs.callPackage (
     cosmic-comp,
   }:
   let
-    version = "1.0.0";
+    version = "1.1.0";
   in
   rustPlatform.buildRustPackage {
     pname = "cosmic-ctl";
@@ -21,7 +21,8 @@ pkgs.callPackage (
       path = ./.;
     };
 
-    cargoHash = "sha256-Nrg7NOAUrVQcwBz7nV3hILRYHr1dprQ5VJj2u7Zf3Q0=";
+    useFetchCargoVendor = true;
+    cargoHash = "sha256-EReo2hkBaIO1YOBx4D9rQSXlx+3NK5VQtj59jfZZI/0=";
 
     doInstallCheck = true;
     nativeInstallCheckInputs = [ versionCheckHook ];

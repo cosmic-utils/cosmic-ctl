@@ -1,10 +1,11 @@
+use atomicwrites::{AtomicFile, OverwriteBehavior};
 use etcetera::{
     base_strategy::{BaseStrategy, Xdg},
     choose_base_strategy,
 };
 use std::{
     fs,
-    io::{Error, ErrorKind},
+    io::{Error, ErrorKind, Write},
     path::{Path, PathBuf},
 };
 use unescaper::unescape;
@@ -60,18 +61,23 @@ pub fn write_configuration(
         }
     }
 
-    fs::create_dir_all(path.parent().unwrap_or_else(|| Path::new(""))).map_err(|e| {
-        Error::new(
-            ErrorKind::Other,
-            format!("Failed to create directory structure: {}", e),
-        )
-    })?;
-    fs::write(&path, unescaped_value).map_err(|e| {
-        Error::new(
-            ErrorKind::Other,
-            format!("Failed to write configuration to {}: {}", path.display(), e),
-        )
-    })?;
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|e| {
+            Error::new(
+                ErrorKind::Other,
+                format!("Failed to create directory structure: {}", e),
+            )
+        })?;
+    }
+
+    let af = AtomicFile::new(&path, OverwriteBehavior::AllowOverwrite);
+    af.write(|f| f.write_all(unescaped_value.as_bytes()))
+        .map_err(|e| {
+            Error::new(
+                ErrorKind::Other,
+                format!("Failed to write configuration to {}: {}", path.display(), e),
+            )
+        })?;
 
     Ok(true)
 }

@@ -68,6 +68,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "atomicwrites"
+version = "0.4.2"
+source = "git+https://github.com/jackpot51/rust-atomicwrites#043ab4859d53ffd3d55334685303d8df39c9f768"
+dependencies = [
+ "rustix",
+ "tempfile",
+ "windows-sys 0.48.0",
+]
+
+[[package]]
 name = "bitflags"
 version = "2.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -147,6 +157,7 @@ name = "cosmic-ctl"
 version = "1.0.0"
 dependencies = [
  "assert_cmd",
+ "atomicwrites",
  "bracoxide",
  "clap",
  "etcetera",

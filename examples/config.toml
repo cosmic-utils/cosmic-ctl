@@ -1,0 +1,47 @@
+"$schema" = "https://raw.githubusercontent.com/cosmic-utils/cosmic-ctl/refs/heads/main/schema.json"
+
+# Component-based operations
+[[operations]]
+component = "com.system76.CosmicComp"
+version = 1
+operation = "write"
+xdg_directory = "config"
+[operations.entries]
+autotile = "true"
+autotile_behavior = "PerWorkspace"
+
+[[operations]]
+component = "com.system76.CosmicSettings"
+version = 1
+operation = "write"
+xdg_directory = "config"
+[operations.entries]
+active-page = "\"time-date\""
+
+[[operations]]
+component = "com.system76.CosmicComp"
+version = 1
+operation = "delete"
+xdg_directory = "config"
+entries = ["autotile_behavior"]
+
+[[operations]]
+component = "com.system76.CosmicComp"
+version = 1
+operation = "read"
+xdg_directory = "config"
+entries = ["autotile"]
+
+# File-based operations
+[[operations]]
+file = "/tmp/cosmic-config-test.conf"
+operation = "write"
+value = "This is a direct file write example"
+
+[[operations]]
+file = "/tmp/cosmic/app-settings.conf"
+operation = "read"
+
+[[operations]]
+file = "/tmp/cosmic-temp-file.conf"
+operation = "delete"

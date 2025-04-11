@@ -1,0 +1,57 @@
+(
+  operations: [
+    // Component-based operations
+    (
+      component: "com.system76.CosmicComp",
+      version: 1,
+      operation: "write",
+      xdg_directory: "config",
+      entries: {
+        "autotile": "true",
+        "autotile_behavior": "PerWorkspace"
+      }
+    ),
+    (
+      component: "com.system76.CosmicSettings",
+      version: 1,
+      operation: "write",
+      xdg_directory: "config",
+      entries: {
+        "active-page": "\"time-date\""
+      }
+    ),
+    (
+      component: "com.system76.CosmicComp",
+      version: 1,
+      operation: "delete",
+      xdg_directory: "config",
+      entries: [
+        "autotile_behavior"
+      ]
+    ),
+    (
+      component: "com.system76.CosmicComp",
+      version: 1,
+      operation: "read",
+      xdg_directory: "config",
+      entries: [
+        "autotile"
+      ]
+    ),
+
+    // File-based operations
+    (
+      file: "/tmp/cosmic-config-test.conf",
+      operation: "write",
+      value: "This is a direct file write example"
+    ),
+    (
+      file: "/tmp/cosmic/app-settings.conf",
+      operation: "read"
+    ),
+    (
+      file: "/tmp/cosmic-temp-file.conf",
+      operation: "delete"
+    )
+  ]
+)

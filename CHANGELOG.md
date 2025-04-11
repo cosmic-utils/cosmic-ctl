@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.0](https://github.com/cosmic-utils/cosmic-ctl/compare/v1.2.0...v1.3.0) (2025-04-11)
+
+
+### Features
+
+* add direct file operations to configuration system ([#6](https://github.com/cosmic-utils/cosmic-ctl/issues/6)) ([32f873a](https://github.com/cosmic-utils/cosmic-ctl/commit/32f873a58d127859fe623069198eb47285405d3c))
+* remove YAML support ([#8](https://github.com/cosmic-utils/cosmic-ctl/issues/8)) ([490ce19](https://github.com/cosmic-utils/cosmic-ctl/commit/490ce1931051304cbb573b5e49ac03aa42c630ea))
+
 ## [1.2.0](https://github.com/cosmic-utils/cosmic-ctl/compare/v1.1.0...v1.2.0) (2025-04-11)
 
 

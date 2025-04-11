@@ -119,6 +119,7 @@ impl Command for BackupCommand {
         }
 
         let backup_data = ConfigFile {
+            // RON doesn't support JSON schemas
             schema: if format != FileFormat::Ron {
                 Some("https://raw.githubusercontent.com/cosmic-utils/cosmic-ctl/refs/heads/main/schema.json".to_string())
             } else {
@@ -127,7 +128,6 @@ impl Command for BackupCommand {
             operations: all_operations,
         };
 
-        // Serialize to the selected format
         let formatted_data = format.serialize(&backup_data)?;
         fs::write(&self.file, formatted_data)?;
 

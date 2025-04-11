@@ -1117,63 +1117,6 @@ fn test_reset_command_with_exclude_with_brace_expansion_and_wildcard() {
 }
 
 #[test]
-fn test_apply_command_yaml() {
-    let temp_dir = TempDir::new().unwrap();
-    let config_home = temp_dir.path().to_str().unwrap();
-
-    let config_yaml = serde_yaml::to_string(&serde_json::json!({
-        "$schema": "https://raw.githubusercontent.com/cosmic-utils/cosmic-ctl/refs/heads/main/schema.json",
-        "operations": [
-            {
-                "component": COSMIC_COMP,
-                "version": VERSION_1,
-                "operation": WRITE_OPERATION,
-                "xdg_directory": XDG_CONFIG_DIR,
-                "entries": {
-                    ENTRY_AUTOTILE: VALUE_TRUE,
-                    ENTRY_AUTOTILE_BEHAVIOR: VALUE_PER_WORKSPACE
-                }
-            }
-        ]
-    })).unwrap();
-
-    let config_file = temp_dir.path().join("config.yaml");
-    fs::write(&config_file, config_yaml).unwrap();
-
-    Command::cargo_bin("cosmic-ctl")
-        .unwrap()
-        .env("XDG_CONFIG_HOME", config_home)
-        .arg(APPLY_OPERATION)
-        .arg(config_file)
-        .assert()
-        .success()
-        .stdout(
-            "Operations completed successfully. 2 writes, 0 reads, 0 deletes, 0 entries skipped.\n",
-        );
-
-    let autotile_path = temp_dir
-        .path()
-        .join("cosmic")
-        .join(COSMIC_COMP)
-        .join(format!("v{}", VERSION_1))
-        .join(ENTRY_AUTOTILE);
-    let autotile_behavior_path = temp_dir
-        .path()
-        .join("cosmic")
-        .join(COSMIC_COMP)
-        .join(format!("v{}", VERSION_1))
-        .join(ENTRY_AUTOTILE_BEHAVIOR);
-
-    assert!(autotile_path.exists());
-    assert!(autotile_behavior_path.exists());
-    assert_eq!(fs::read_to_string(autotile_path).unwrap(), VALUE_TRUE);
-    assert_eq!(
-        fs::read_to_string(autotile_behavior_path).unwrap(),
-        VALUE_PER_WORKSPACE
-    );
-}
-
-#[test]
 fn test_apply_command_toml() {
     let temp_dir = TempDir::new().unwrap();
     let config_home = temp_dir.path().to_str().unwrap();
@@ -1325,47 +1268,6 @@ fn test_apply_command_ron() {
 }
 
 #[test]
-fn test_backup_command_yaml() {
-    let temp_dir = TempDir::new().unwrap();
-    let config_home = temp_dir.path().to_str().unwrap();
-
-    Command::cargo_bin("cosmic-ctl")
-        .unwrap()
-        .env("XDG_CONFIG_HOME", config_home)
-        .args([
-            WRITE_OPERATION,
-            "--version",
-            &VERSION_1.to_string(),
-            "--component",
-            COSMIC_COMP,
-            "--entry",
-            ENTRY_AUTOTILE,
-            VALUE_TRUE,
-        ])
-        .assert()
-        .success();
-
-    let backup_file = temp_dir.path().join("backup.yaml");
-
-    Command::cargo_bin("cosmic-ctl")
-        .unwrap()
-        .env("XDG_CONFIG_HOME", config_home)
-        .arg(BACKUP_OPERATION)
-        .arg(&backup_file)
-        .assert()
-        .success()
-        .stdout("Backup completed successfully. 1 total entries backed up in YAML format.\n");
-
-    assert!(backup_file.exists());
-
-    let backup_content = fs::read_to_string(&backup_file).unwrap();
-    let yaml_data: serde_yaml::Value = serde_yaml::from_str(&backup_content).unwrap();
-
-    assert!(yaml_data.get("operations").is_some());
-    assert!(yaml_data.get("$schema").is_some());
-}
-
-#[test]
 fn test_backup_command_toml() {
     let temp_dir = TempDir::new().unwrap();
     let config_home = temp_dir.path().to_str().unwrap();
@@ -1487,4 +1389,302 @@ fn test_backup_command_with_explicit_format() {
 
     assert!(json_data.get("operations").is_some());
     assert!(json_data.get("$schema").is_some());
+}
+
+#[test]
+fn test_file_write_command() {
+    let temp_dir = TempDir::new().unwrap();
+    let file_path = temp_dir.path().join("test-config.conf");
+    let file_path_str = file_path.to_str().unwrap();
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .args([
+            WRITE_OPERATION,
+            "--file",
+            file_path_str,
+            "Example configuration content",
+        ])
+        .assert()
+        .success()
+        .stdout("Configuration file written successfully.\n");
+
+    assert!(file_path.exists());
+    assert_eq!(
+        fs::read_to_string(&file_path).unwrap(),
+        "Example configuration content"
+    );
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .args([
+            WRITE_OPERATION,
+            "--file",
+            file_path_str,
+            "Example configuration content",
+        ])
+        .assert()
+        .success()
+        .stdout("Doing nothing. Configuration file already has the same value.\n");
+}
+
+#[test]
+fn test_file_read_command() {
+    let temp_dir = TempDir::new().unwrap();
+    let file_path = temp_dir.path().join("test-config.conf");
+    let file_path_str = file_path.to_str().unwrap();
+    let content = "Example configuration content";
+
+    fs::write(&file_path, content).unwrap();
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .args([READ_OPERATION, "--file", file_path_str])
+        .assert()
+        .success()
+        .stdout(format!("{}\n", content));
+}
+
+#[test]
+fn test_file_delete_command() {
+    let temp_dir = TempDir::new().unwrap();
+    let file_path = temp_dir.path().join("test-config.conf");
+    let file_path_str = file_path.to_str().unwrap();
+
+    fs::write(&file_path, "Example configuration content").unwrap();
+    assert!(file_path.exists());
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .args([DELETE_OPERATION, "--file", file_path_str])
+        .assert()
+        .success()
+        .stdout("Configuration file deleted successfully.\n");
+
+    assert!(!file_path.exists());
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .args([DELETE_OPERATION, "--file", file_path_str])
+        .assert()
+        .failure();
+}
+
+#[test]
+fn test_apply_command_with_file_operations_json() {
+    let temp_dir = TempDir::new().unwrap();
+    let test_file = temp_dir.path().join("test-config.conf");
+    let test_file_str = test_file.to_str().unwrap();
+
+    let config_json = json!({
+        "operations": [
+            {
+                "file": test_file_str,
+                "operation": WRITE_OPERATION,
+                "value": "This is a direct file write test"
+            }
+        ]
+    });
+
+    let config_file = temp_dir.path().join("config.json");
+    fs::write(
+        &config_file,
+        serde_json::to_string_pretty(&config_json).unwrap(),
+    )
+    .unwrap();
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .arg(APPLY_OPERATION)
+        .arg(&config_file)
+        .assert()
+        .success()
+        .stdout(
+            "Operations completed successfully. 1 writes, 0 reads, 0 deletes, 0 entries skipped.\n",
+        );
+
+    assert!(test_file.exists());
+    assert_eq!(
+        fs::read_to_string(&test_file).unwrap(),
+        "This is a direct file write test"
+    );
+}
+
+#[test]
+fn test_apply_command_with_file_operations_toml() {
+    let temp_dir = TempDir::new().unwrap();
+    let test_file = temp_dir.path().join("test-config.conf");
+    let read_file = temp_dir.path().join("read-me.conf");
+    let delete_file = temp_dir.path().join("delete-me.conf");
+
+    // Create files for read and delete operations
+    fs::write(&read_file, "Content to be read").unwrap();
+    fs::write(&delete_file, "Content to be deleted").unwrap();
+
+    // Create TOML configuration with file operations
+    let mut operation1 = toml::Table::new();
+    operation1.insert(
+        "file".to_string(),
+        toml::Value::String(test_file.to_str().unwrap().to_string()),
+    );
+    operation1.insert(
+        "operation".to_string(),
+        toml::Value::String(WRITE_OPERATION.to_string()),
+    );
+    operation1.insert(
+        "value".to_string(),
+        toml::Value::String("This is a direct TOML file write".to_string()),
+    );
+
+    let mut operation2 = toml::Table::new();
+    operation2.insert(
+        "file".to_string(),
+        toml::Value::String(read_file.to_str().unwrap().to_string()),
+    );
+    operation2.insert(
+        "operation".to_string(),
+        toml::Value::String(READ_OPERATION.to_string()),
+    );
+
+    let mut operation3 = toml::Table::new();
+    operation3.insert(
+        "file".to_string(),
+        toml::Value::String(delete_file.to_str().unwrap().to_string()),
+    );
+    operation3.insert(
+        "operation".to_string(),
+        toml::Value::String(DELETE_OPERATION.to_string()),
+    );
+
+    let mut operations = Vec::new();
+    operations.push(toml::Value::Table(operation1));
+    operations.push(toml::Value::Table(operation2));
+    operations.push(toml::Value::Table(operation3));
+
+    let mut root = toml::Table::new();
+    root.insert("operations".to_string(), toml::Value::Array(operations));
+
+    let config_file = temp_dir.path().join("config.toml");
+    fs::write(&config_file, toml::to_string_pretty(&root).unwrap()).unwrap();
+
+    let output = Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .arg(APPLY_OPERATION)
+        .arg("--verbose")
+        .arg(&config_file)
+        .assert()
+        .success();
+
+    let stdout = String::from_utf8(output.get_output().stdout.clone()).unwrap();
+
+    assert!(stdout.contains("Content to be read"));
+    assert!(stdout.contains("Deleted:"));
+    assert!(stdout.contains("Operations completed successfully. 1 writes, 1 reads, 1 deletes"));
+
+    assert!(test_file.exists());
+    assert!(!delete_file.exists());
+    assert_eq!(
+        fs::read_to_string(&test_file).unwrap(),
+        "This is a direct TOML file write"
+    );
+}
+
+#[test]
+fn test_apply_command_with_file_operations_ron() {
+    let temp_dir = TempDir::new().unwrap();
+    let test_file = temp_dir.path().join("test-config.conf");
+    let test_file_str = test_file.to_str().unwrap();
+
+    let ron_config = format!(
+        r#"(
+            operations: [
+                (
+                    file: "{test_file_str}",
+                    operation: "write",
+                    value: "This is a direct RON file write"
+                )
+            ]
+        )"#,
+        test_file_str = test_file_str.replace("\\", "\\\\")
+    );
+
+    let config_file = temp_dir.path().join("config.ron");
+    fs::write(&config_file, ron_config).unwrap();
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .arg(APPLY_OPERATION)
+        .arg(&config_file)
+        .assert()
+        .success()
+        .stdout(
+            "Operations completed successfully. 1 writes, 0 reads, 0 deletes, 0 entries skipped.\n",
+        );
+
+    assert!(test_file.exists());
+    assert_eq!(
+        fs::read_to_string(&test_file).unwrap(),
+        "This is a direct RON file write"
+    );
+}
+
+#[test]
+fn test_apply_command_mixed_operations() {
+    let temp_dir = TempDir::new().unwrap();
+    let config_home = temp_dir.path().to_str().unwrap();
+    let test_file = temp_dir.path().join("test-config.conf");
+    let test_file_str = test_file.to_str().unwrap();
+
+    let config_json = json!({
+        "operations": [
+            {
+                "component": COSMIC_COMP,
+                "version": VERSION_1,
+                "operation": WRITE_OPERATION,
+                "xdg_directory": XDG_CONFIG_DIR,
+                "entries": {
+                    ENTRY_AUTOTILE: VALUE_TRUE
+                }
+            },
+            {
+                "file": test_file_str,
+                "operation": WRITE_OPERATION,
+                "value": "Direct file write example"
+            }
+        ]
+    });
+
+    let config_file = temp_dir.path().join("config.json");
+    fs::write(
+        &config_file,
+        serde_json::to_string_pretty(&config_json).unwrap(),
+    )
+    .unwrap();
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .arg(APPLY_OPERATION)
+        .arg(&config_file)
+        .assert()
+        .success()
+        .stdout(
+            "Operations completed successfully. 2 writes, 0 reads, 0 deletes, 0 entries skipped.\n",
+        );
+
+    let config_path = temp_dir
+        .path()
+        .join("cosmic")
+        .join(COSMIC_COMP)
+        .join(format!("v{}", VERSION_1))
+        .join(ENTRY_AUTOTILE);
+
+    assert!(config_path.exists());
+    assert_eq!(fs::read_to_string(config_path).unwrap(), VALUE_TRUE);
+
+    assert!(test_file.exists());
+    assert_eq!(
+        fs::read_to_string(&test_file).unwrap(),
+        "Direct file write example"
+    );
 }

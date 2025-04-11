@@ -32,7 +32,7 @@ impl Command for BackupCommand {
     type Err = Error;
 
     fn execute(&self) -> Result<(), Self::Err> {
-        let format = match &self.format {
+        let file_format = match &self.format {
             Some(fmt) => match fmt.to_lowercase().as_str() {
                 "json" => FileFormat::Json,
                 "yaml" | "yml" => FileFormat::Yaml,
@@ -49,7 +49,7 @@ impl Command for BackupCommand {
         };
 
         if self.verbose {
-            println!("Using {} format for output file", format.name());
+            println!("Using {} format for output file", file_format.name());
         }
 
         let mut total_entry_count = 0;
@@ -120,7 +120,7 @@ impl Command for BackupCommand {
 
         let backup_data = ConfigFile {
             // RON doesn't support JSON schemas
-            schema: if format != FileFormat::Ron {
+            schema: if file_format != FileFormat::Ron {
                 Some("https://raw.githubusercontent.com/cosmic-utils/cosmic-ctl/refs/heads/main/schema.json".to_string())
             } else {
                 None
@@ -128,13 +128,13 @@ impl Command for BackupCommand {
             operations: all_operations,
         };
 
-        let formatted_data = format.serialize(&backup_data)?;
+        let formatted_data = file_format.serialize(&backup_data)?;
         fs::write(&self.file, formatted_data)?;
 
         println!(
             "Backup completed successfully. {} total entries backed up in {} format.",
             total_entry_count,
-            format.name()
+            file_format.name()
         );
         Ok(())
     }

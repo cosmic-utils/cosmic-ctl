@@ -24,14 +24,14 @@ impl Command for ApplyCommand {
     type Err = Error;
 
     fn execute(&self) -> Result<(), Self::Err> {
-        let format = FileFormat::from_path(&self.file)?;
+        let file_format = FileFormat::from_path(&self.file)?;
 
         if self.verbose {
-            println!("Using {} format for input file", format.name());
+            println!("Using {} format for input file", file_format.name());
         }
 
         let file_content = fs::read_to_string(&self.file)?;
-        let config_file: ConfigFile = format.deserialize(&file_content)?;
+        let config_file: ConfigFile = file_format.deserialize(&file_content)?;
 
         let mut delete_count = 0;
         let mut read_count = 0;

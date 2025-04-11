@@ -32,7 +32,6 @@ impl Command for BackupCommand {
     type Err = Error;
 
     fn execute(&self) -> Result<(), Self::Err> {
-        // Determine the output format, either from explicit flag or from file extension
         let format = match &self.format {
             Some(fmt) => match fmt.to_lowercase().as_str() {
                 "json" => FileFormat::Json,
@@ -119,9 +118,7 @@ impl Command for BackupCommand {
             }
         }
 
-        // Create ConfigFile with optional schema that's only set for non-RON formats
         let backup_data = ConfigFile {
-            // Only set schema for non-RON formats
             schema: if format != FileFormat::Ron {
                 Some("https://raw.githubusercontent.com/cosmic-utils/cosmic-ctl/refs/heads/main/schema.json".to_string())
             } else {

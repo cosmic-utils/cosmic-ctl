@@ -24,14 +24,12 @@ impl Command for ApplyCommand {
     type Err = Error;
 
     fn execute(&self) -> Result<(), Self::Err> {
-        // Detect file format from extension
         let format = FileFormat::from_path(&self.file)?;
 
         if self.verbose {
             println!("Using {} format for input file", format.name());
         }
 
-        // Read and parse the configuration file
         let file_content = fs::read_to_string(&self.file)?;
         let config_file: ConfigFile = format.deserialize(&file_content)?;
 

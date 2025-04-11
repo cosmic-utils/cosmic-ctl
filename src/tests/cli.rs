@@ -1275,11 +1275,13 @@ fn test_apply_command_ron() {
     let config = ConfigFile {
         schema: None,
         operations: vec![Entry {
-            component: COSMIC_COMP.to_string(),
-            version: VERSION_1,
+            component: Some(COSMIC_COMP.to_string()),
+            file: None,
+            value: None,
+            version: Some(VERSION_1),
             operation: Operation::Write,
-            xdg_directory: XDG_CONFIG_DIR.to_string(),
-            entries: EntryContent::WriteEntries(entries),
+            xdg_directory: Some(XDG_CONFIG_DIR.to_string()),
+            entries: Some(EntryContent::WriteEntries(entries)),
         }],
     };
 

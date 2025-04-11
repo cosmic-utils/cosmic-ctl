@@ -66,7 +66,7 @@ impl Command for BackupCommand {
                 .filter(|e| e.file_type().is_file())
             {
                 if let Some((component, version, entry_name)) =
-                    parse_configuration_path(&entry.path())
+                    parse_configuration_path(entry.path())
                 {
                     match read_configuration(&component, &version, &entry_name, xdg_dir) {
                         Ok(content) => {
@@ -99,11 +99,13 @@ impl Command for BackupCommand {
             let xdg_entries: Vec<Entry> = operations
                 .into_iter()
                 .map(|((component, version), entries)| Entry {
-                    component,
-                    version,
+                    component: Some(component),
+                    file: None,
+                    value: None,
+                    version: Some(version),
                     operation: Operation::Write,
-                    entries: EntryContent::WriteEntries(entries),
-                    xdg_directory: xdg_dir.to_string(),
+                    entries: Some(EntryContent::WriteEntries(entries)),
+                    xdg_directory: Some(xdg_dir.to_string()),
                 })
                 .collect();
 

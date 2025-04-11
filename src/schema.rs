@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::path::PathBuf;
 
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -18,11 +19,19 @@ pub enum EntryContent {
 
 #[derive(Deserialize, Serialize)]
 pub struct Entry {
-    pub component: String,
-    pub version: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub component: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<u64>,
     pub operation: Operation,
-    pub entries: EntryContent,
-    pub xdg_directory: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub entries: Option<EntryContent>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub xdg_directory: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file: Option<PathBuf>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub value: Option<String>,
 }
 
 #[derive(Deserialize, Serialize)]

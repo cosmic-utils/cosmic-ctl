@@ -40,6 +40,17 @@ pub fn read_configuration(
     }
 }
 
+pub fn read_configuration_file(file_path: &PathBuf) -> Result<String, Error> {
+    if file_path.exists() {
+        fs::read_to_string(file_path)
+    } else {
+        Err(Error::new(
+            ErrorKind::NotFound,
+            format!("Configuration file not found: {}", file_path.display()),
+        ))
+    }
+}
+
 pub fn write_configuration(
     component: &str,
     version: &u64,
@@ -82,6 +93,45 @@ pub fn write_configuration(
     Ok(true)
 }
 
+pub fn write_configuration_file(file_path: &PathBuf, value: &str) -> Result<bool, Error> {
+    let unescaped_value = unescape(value).map_err(|e| {
+        Error::new(
+            ErrorKind::InvalidInput,
+            format!("Failed to unescape value: {}", e),
+        )
+    })?;
+
+    if let Ok(current_value) = fs::read_to_string(file_path) {
+        if current_value == unescaped_value {
+            return Ok(false);
+        }
+    }
+
+    if let Some(parent) = file_path.parent() {
+        fs::create_dir_all(parent).map_err(|e| {
+            Error::new(
+                ErrorKind::Other,
+                format!("Failed to create directory structure: {}", e),
+            )
+        })?;
+    }
+
+    let af = AtomicFile::new(file_path, OverwriteBehavior::AllowOverwrite);
+    af.write(|f| f.write_all(unescaped_value.as_bytes()))
+        .map_err(|e| {
+            Error::new(
+                ErrorKind::Other,
+                format!(
+                    "Failed to write configuration to {}: {}",
+                    file_path.display(),
+                    e
+                ),
+            )
+        })?;
+
+    Ok(true)
+}
+
 pub fn delete_configuration(
     component: &str,
     version: &u64,
@@ -96,6 +146,18 @@ pub fn delete_configuration(
         Err(Error::new(
             ErrorKind::NotFound,
             "Configuration entry does not exist",
+        ))
+    }
+}
+
+pub fn delete_configuration_file(file_path: &PathBuf) -> Result<(), Error> {
+    if file_path.exists() {
+        fs::remove_file(file_path)?;
+        Ok(())
+    } else {
+        Err(Error::new(
+            ErrorKind::NotFound,
+            "Configuration file does not exist",
         ))
     }
 }

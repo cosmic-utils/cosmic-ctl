@@ -1,5 +1,6 @@
 mod commands;
 mod config;
+mod formats;
 mod schema;
 #[cfg(test)]
 mod tests;
@@ -20,12 +21,8 @@ struct Cli {
 fn main() {
     let cli = Cli::parse();
 
-    match cli.command {
-        cmd => {
-            if let Err(e) = cmd.execute() {
-                eprintln!("Error: {}", e);
-                std::process::exit(1);
-            }
-        }
+    if let Err(e) = cli.command.execute() {
+        eprintln!("Error: {}", e);
+        std::process::exit(1);
     }
 }

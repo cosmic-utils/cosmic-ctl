@@ -18,8 +18,8 @@ const ENTRY_XKB_CONFIG: &str = "xkb_config";
 const XDG_CONFIG_DIR: &str = "config";
 const XDG_STATE_DIR: &str = "state";
 
-const VERSION_1: i32 = 1;
-const VERSION_2: i32 = 2;
+const VERSION_1: u64 = 1;
+const VERSION_2: u64 = 2;
 
 const VALUE_TRUE: &str = "true";
 const VALUE_PER_WORKSPACE: &str = "PerWorkspace";
@@ -257,7 +257,7 @@ fn test_apply_command_verbose() {
         .assert()
         .success()
         .stdout(
-            "Operations completed successfully. 2 writes, 0 reads, 0 deletes, 0 entries skipped.\n",
+            "Using JSON format for input file\nOperations completed successfully. 2 writes, 0 reads, 0 deletes, 0 entries skipped.\n",
         );
 
     let output = Command::cargo_bin("cosmic-ctl")
@@ -330,7 +330,7 @@ fn test_backup_command() {
         .arg(&backup_file)
         .assert()
         .success()
-        .stdout("Backup completed successfully. 1 total entries backed up.\n");
+        .stdout("Backup completed successfully. 1 total entries backed up in JSON format.\n");
 
     assert!(backup_file.exists());
 
@@ -371,7 +371,7 @@ fn test_backup_command_verbose() {
         .assert()
         .success()
         .stdout(format!(
-            "Backing up [{}]: {}/v{}/{}\nCompleted backup for {} directory: 1 entries\nCompleted backup for {} directory: 0 entries\nBackup completed successfully. 1 total entries backed up.\n",
+            "Using JSON format for output file\nBacking up [{}]: {}/v{}/{}\nCompleted backup for {} directory: 1 entries\nCompleted backup for {} directory: 0 entries\nBackup completed successfully. 1 total entries backed up in JSON format.\n",
             XDG_CONFIG_DIR, COSMIC_COMP, VERSION_1, ENTRY_AUTOTILE, XDG_CONFIG_DIR, XDG_STATE_DIR
         ));
 
@@ -454,6 +454,8 @@ fn test_reset_command() {
 fn test_reset_command_verbose() {
     let temp_dir = TempDir::new().unwrap();
     let config_home = temp_dir.path().to_str().unwrap();
+    let temp_dir2 = TempDir::new().unwrap();
+    let state_home = temp_dir2.path().to_str().unwrap();
 
     Command::cargo_bin("cosmic-ctl")
         .unwrap()
@@ -483,6 +485,7 @@ fn test_reset_command_verbose() {
     Command::cargo_bin("cosmic-ctl")
         .unwrap()
         .env("XDG_CONFIG_HOME", config_home)
+        .env("XDG_STATE_HOME", state_home)
         .args(["reset", "--force", "--verbose"])
         .assert()
         .success()
@@ -1111,4 +1114,375 @@ fn test_reset_command_with_exclude_with_brace_expansion_and_wildcard() {
     assert!(autotile_behavior_path.exists());
     assert!(autotile_v2_path.exists());
     assert!(!xkb_config_path.exists())
+}
+
+#[test]
+fn test_apply_command_yaml() {
+    let temp_dir = TempDir::new().unwrap();
+    let config_home = temp_dir.path().to_str().unwrap();
+
+    let config_yaml = serde_yaml::to_string(&serde_json::json!({
+        "$schema": "https://raw.githubusercontent.com/cosmic-utils/cosmic-ctl/refs/heads/main/schema.json",
+        "operations": [
+            {
+                "component": COSMIC_COMP,
+                "version": VERSION_1,
+                "operation": WRITE_OPERATION,
+                "xdg_directory": XDG_CONFIG_DIR,
+                "entries": {
+                    ENTRY_AUTOTILE: VALUE_TRUE,
+                    ENTRY_AUTOTILE_BEHAVIOR: VALUE_PER_WORKSPACE
+                }
+            }
+        ]
+    })).unwrap();
+
+    let config_file = temp_dir.path().join("config.yaml");
+    fs::write(&config_file, config_yaml).unwrap();
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .arg(APPLY_OPERATION)
+        .arg(config_file)
+        .assert()
+        .success()
+        .stdout(
+            "Operations completed successfully. 2 writes, 0 reads, 0 deletes, 0 entries skipped.\n",
+        );
+
+    let autotile_path = temp_dir
+        .path()
+        .join("cosmic")
+        .join(COSMIC_COMP)
+        .join(format!("v{}", VERSION_1))
+        .join(ENTRY_AUTOTILE);
+    let autotile_behavior_path = temp_dir
+        .path()
+        .join("cosmic")
+        .join(COSMIC_COMP)
+        .join(format!("v{}", VERSION_1))
+        .join(ENTRY_AUTOTILE_BEHAVIOR);
+
+    assert!(autotile_path.exists());
+    assert!(autotile_behavior_path.exists());
+    assert_eq!(fs::read_to_string(autotile_path).unwrap(), VALUE_TRUE);
+    assert_eq!(
+        fs::read_to_string(autotile_behavior_path).unwrap(),
+        VALUE_PER_WORKSPACE
+    );
+}
+
+#[test]
+fn test_apply_command_toml() {
+    let temp_dir = TempDir::new().unwrap();
+    let config_home = temp_dir.path().to_str().unwrap();
+
+    // Create TOML configuration
+    let mut entries = toml::Table::new();
+    entries.insert(
+        ENTRY_AUTOTILE.to_string(),
+        toml::Value::String(VALUE_TRUE.to_string()),
+    );
+    entries.insert(
+        ENTRY_AUTOTILE_BEHAVIOR.to_string(),
+        toml::Value::String(VALUE_PER_WORKSPACE.to_string()),
+    );
+
+    let mut operation = toml::Table::new();
+    operation.insert(
+        "component".to_string(),
+        toml::Value::String(COSMIC_COMP.to_string()),
+    );
+    operation.insert(
+        "version".to_string(),
+        toml::Value::Integer(VERSION_1 as i64),
+    );
+    operation.insert(
+        "operation".to_string(),
+        toml::Value::String(WRITE_OPERATION.to_string()),
+    );
+    operation.insert(
+        "xdg_directory".to_string(),
+        toml::Value::String(XDG_CONFIG_DIR.to_string()),
+    );
+    operation.insert("entries".to_string(), toml::Value::Table(entries));
+
+    let mut operations = Vec::new();
+    operations.push(toml::Value::Table(operation));
+
+    let mut root = toml::Table::new();
+    root.insert(
+        "$schema".to_string(),
+        toml::Value::String(
+            "https://raw.githubusercontent.com/cosmic-utils/cosmic-ctl/refs/heads/main/schema.json"
+                .to_string(),
+        ),
+    );
+    root.insert("operations".to_string(), toml::Value::Array(operations));
+
+    let config_file = temp_dir.path().join("config.toml");
+    fs::write(&config_file, toml::to_string_pretty(&root).unwrap()).unwrap();
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .arg(APPLY_OPERATION)
+        .arg(config_file)
+        .assert()
+        .success()
+        .stdout(
+            "Operations completed successfully. 2 writes, 0 reads, 0 deletes, 0 entries skipped.\n",
+        );
+
+    let autotile_path = temp_dir
+        .path()
+        .join("cosmic")
+        .join(COSMIC_COMP)
+        .join(format!("v{}", VERSION_1))
+        .join(ENTRY_AUTOTILE);
+    let autotile_behavior_path = temp_dir
+        .path()
+        .join("cosmic")
+        .join(COSMIC_COMP)
+        .join(format!("v{}", VERSION_1))
+        .join(ENTRY_AUTOTILE_BEHAVIOR);
+
+    assert!(autotile_path.exists());
+    assert!(autotile_behavior_path.exists());
+    assert_eq!(fs::read_to_string(autotile_path).unwrap(), VALUE_TRUE);
+    assert_eq!(
+        fs::read_to_string(autotile_behavior_path).unwrap(),
+        VALUE_PER_WORKSPACE
+    );
+}
+
+#[test]
+fn test_apply_command_ron() {
+    let temp_dir = TempDir::new().unwrap();
+    let config_home = temp_dir.path().to_str().unwrap();
+
+    use crate::schema::{ConfigFile, Entry, EntryContent, Operation};
+    use std::collections::HashMap;
+
+    let mut entries = HashMap::new();
+    entries.insert(ENTRY_AUTOTILE.to_string(), VALUE_TRUE.to_string());
+    entries.insert(
+        ENTRY_AUTOTILE_BEHAVIOR.to_string(),
+        VALUE_PER_WORKSPACE.to_string(),
+    );
+
+    let config = ConfigFile {
+        schema: None,
+        operations: vec![Entry {
+            component: COSMIC_COMP.to_string(),
+            version: VERSION_1,
+            operation: Operation::Write,
+            xdg_directory: XDG_CONFIG_DIR.to_string(),
+            entries: EntryContent::WriteEntries(entries),
+        }],
+    };
+
+    let ron_config =
+        ron::ser::to_string_pretty(&config, ron::ser::PrettyConfig::default()).unwrap();
+
+    let config_file = temp_dir.path().join("config.ron");
+    fs::write(&config_file, ron_config).unwrap();
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .arg(APPLY_OPERATION)
+        .arg(config_file)
+        .assert()
+        .success()
+        .stdout(
+            "Operations completed successfully. 2 writes, 0 reads, 0 deletes, 0 entries skipped.\n",
+        );
+
+    let autotile_path = temp_dir
+        .path()
+        .join("cosmic")
+        .join(COSMIC_COMP)
+        .join(format!("v{}", VERSION_1))
+        .join(ENTRY_AUTOTILE);
+    let autotile_behavior_path = temp_dir
+        .path()
+        .join("cosmic")
+        .join(COSMIC_COMP)
+        .join(format!("v{}", VERSION_1))
+        .join(ENTRY_AUTOTILE_BEHAVIOR);
+
+    assert!(autotile_path.exists());
+    assert!(autotile_behavior_path.exists());
+    assert_eq!(fs::read_to_string(autotile_path).unwrap(), VALUE_TRUE);
+    assert_eq!(
+        fs::read_to_string(autotile_behavior_path).unwrap(),
+        VALUE_PER_WORKSPACE
+    );
+}
+
+#[test]
+fn test_backup_command_yaml() {
+    let temp_dir = TempDir::new().unwrap();
+    let config_home = temp_dir.path().to_str().unwrap();
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args([
+            WRITE_OPERATION,
+            "--version",
+            &VERSION_1.to_string(),
+            "--component",
+            COSMIC_COMP,
+            "--entry",
+            ENTRY_AUTOTILE,
+            VALUE_TRUE,
+        ])
+        .assert()
+        .success();
+
+    let backup_file = temp_dir.path().join("backup.yaml");
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .arg(BACKUP_OPERATION)
+        .arg(&backup_file)
+        .assert()
+        .success()
+        .stdout("Backup completed successfully. 1 total entries backed up in YAML format.\n");
+
+    assert!(backup_file.exists());
+
+    let backup_content = fs::read_to_string(&backup_file).unwrap();
+    let yaml_data: serde_yaml::Value = serde_yaml::from_str(&backup_content).unwrap();
+
+    assert!(yaml_data.get("operations").is_some());
+    assert!(yaml_data.get("$schema").is_some());
+}
+
+#[test]
+fn test_backup_command_toml() {
+    let temp_dir = TempDir::new().unwrap();
+    let config_home = temp_dir.path().to_str().unwrap();
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args([
+            WRITE_OPERATION,
+            "--version",
+            &VERSION_1.to_string(),
+            "--component",
+            COSMIC_COMP,
+            "--entry",
+            ENTRY_AUTOTILE,
+            VALUE_TRUE,
+        ])
+        .assert()
+        .success();
+
+    let backup_file = temp_dir.path().join("backup.toml");
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .arg(BACKUP_OPERATION)
+        .arg(&backup_file)
+        .assert()
+        .success()
+        .stdout("Backup completed successfully. 1 total entries backed up in TOML format.\n");
+
+    assert!(backup_file.exists());
+
+    let backup_content = fs::read_to_string(&backup_file).unwrap();
+    let toml_data: toml::Table = toml::from_str(&backup_content).unwrap();
+
+    assert!(toml_data.get("operations").is_some());
+    assert!(toml_data.get("$schema").is_some());
+}
+
+#[test]
+fn test_backup_command_ron() {
+    let temp_dir = TempDir::new().unwrap();
+    let config_home = temp_dir.path().to_str().unwrap();
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args([
+            WRITE_OPERATION,
+            "--version",
+            &VERSION_1.to_string(),
+            "--component",
+            COSMIC_COMP,
+            "--entry",
+            ENTRY_AUTOTILE,
+            VALUE_TRUE,
+        ])
+        .assert()
+        .success();
+
+    let backup_file = temp_dir.path().join("backup.ron");
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .arg(BACKUP_OPERATION)
+        .arg(&backup_file)
+        .assert()
+        .success()
+        .stdout("Backup completed successfully. 1 total entries backed up in RON format.\n");
+
+    assert!(backup_file.exists());
+
+    let backup_content = fs::read_to_string(&backup_file).unwrap();
+
+    use crate::schema::ConfigFile;
+    let config: ConfigFile = ron::from_str(&backup_content).unwrap();
+
+    assert!(!config.operations.is_empty());
+}
+
+#[test]
+fn test_backup_command_with_explicit_format() {
+    let temp_dir = TempDir::new().unwrap();
+    let config_home = temp_dir.path().to_str().unwrap();
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args([
+            WRITE_OPERATION,
+            "--version",
+            &VERSION_1.to_string(),
+            "--component",
+            COSMIC_COMP,
+            "--entry",
+            ENTRY_AUTOTILE,
+            VALUE_TRUE,
+        ])
+        .assert()
+        .success();
+
+    let backup_file = temp_dir.path().join("backup.txt");
+
+    Command::cargo_bin("cosmic-ctl")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", config_home)
+        .args([BACKUP_OPERATION, "--format", "json"])
+        .arg(&backup_file)
+        .assert()
+        .success()
+        .stdout("Backup completed successfully. 1 total entries backed up in JSON format.\n");
+
+    assert!(backup_file.exists());
+
+    let backup_content = fs::read_to_string(&backup_file).unwrap();
+    let json_data: serde_json::Value = serde_json::from_str(&backup_content).unwrap();
+
+    assert!(json_data.get("operations").is_some());
+    assert!(json_data.get("$schema").is_some());
 }

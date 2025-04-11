@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/cosmic-utils/cosmic-ctl/compare/v1.1.0...v1.2.0) (2025-04-11)
+
+
+### Features
+
+* **commands:** add support for YAML, TOML and RON formats ([#4](https://github.com/cosmic-utils/cosmic-ctl/issues/4)) ([5b746ff](https://github.com/cosmic-utils/cosmic-ctl/commit/5b746ff387c4df6fa88684179f6a5b8e6c8e63c7))
+
 ## [1.1.0](https://github.com/cosmic-utils/cosmic-ctl/compare/v1.0.0...v1.1.0) (2024-12-29)
 
 

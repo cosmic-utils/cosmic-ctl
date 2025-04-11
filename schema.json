@@ -31,6 +31,12 @@
               "state"
             ]
           },
+          "file": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
           "entries": {
             "oneOf": [
               {
@@ -52,11 +58,40 @@
             ]
           }
         },
-        "required": [
-          "component",
-          "version",
-          "operation",
-          "entries"
+        "oneOf": [
+          {
+            "required": [
+              "component",
+              "version",
+              "operation",
+              "entries"
+            ]
+          },
+          {
+            "allOf": [
+              {
+                "required": [
+                  "file",
+                  "operation"
+                ]
+              },
+              {
+                "oneOf": [
+                  {
+                    "properties": {
+                      "operation": { "enum": ["write"] }
+                    },
+                    "required": ["value"]
+                  },
+                  {
+                    "properties": {
+                      "operation": { "enum": ["read", "delete"] }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
         ]
       }
     }

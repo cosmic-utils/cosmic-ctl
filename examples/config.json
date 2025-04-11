@@ -37,6 +37,19 @@
       "entries": [
         "autotile"
       ]
+    },
+    {
+      "file": "/tmp/cosmic-config-test.conf",
+      "operation": "write",
+      "value": "This is a direct file write example"
+    },
+    {
+      "file": "/tmp/cosmic/app-settings.conf",
+      "operation": "read"
+    },
+    {
+      "file": "/tmp/cosmic-temp-file.conf",
+      "operation": "delete"
     }
   ]
 }

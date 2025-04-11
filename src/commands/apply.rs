@@ -1,6 +1,9 @@
 use crate::{
     commands::Command,
-    config::{delete_configuration, read_configuration, write_configuration},
+    config::{
+        delete_configuration, delete_configuration_file, read_configuration,
+        read_configuration_file, write_configuration, write_configuration_file,
+    },
     formats::FileFormat,
     schema::{ConfigFile, EntryContent, Operation},
 };
@@ -39,21 +42,95 @@ impl Command for ApplyCommand {
         let mut write_changes = 0;
 
         for entry in config_file.operations {
-            match (entry.operation, entry.entries) {
+            if let Some(file_path) = &entry.file {
+                match entry.operation {
+                    Operation::Write => {
+                        let value = entry.value.ok_or_else(|| {
+                            Error::new(
+                                ErrorKind::InvalidData,
+                                "Value is required for file write operations",
+                            )
+                        })?;
+
+                        match write_configuration_file(file_path, &value) {
+                            Ok(false) => {
+                                if self.verbose {
+                                    println!("Skipping {} - value unchanged", file_path.display());
+                                }
+                                skipped += 1;
+                            }
+                            Ok(true) => {
+                                if self.verbose {
+                                    println!("Wrote to {}", file_path.display());
+                                }
+                                write_changes += 1;
+                            }
+                            Err(e) => {
+                                eprintln!("Error writing {}: {}", file_path.display(), e);
+                                skipped += 1;
+                            }
+                        }
+                    }
+                    Operation::Read => match read_configuration_file(file_path) {
+                        Ok(content) => {
+                            println!("{}: {}", file_path.display(), content);
+                            read_count += 1;
+                        }
+                        Err(e) => {
+                            if self.verbose {
+                                println!("Error reading {}: {}", file_path.display(), e);
+                            }
+                            skipped += 1;
+                        }
+                    },
+                    Operation::Delete => match delete_configuration_file(file_path) {
+                        Ok(()) => {
+                            if self.verbose {
+                                println!("Deleted: {}", file_path.display());
+                            }
+                            delete_count += 1;
+                        }
+                        Err(e) => {
+                            if self.verbose {
+                                println!("Failed to delete {}: {}", file_path.display(), e);
+                            }
+                            skipped += 1;
+                        }
+                    },
+                }
+                continue;
+            }
+
+            let component = entry.component.as_deref().ok_or_else(|| {
+                Error::new(
+                    ErrorKind::InvalidData,
+                    "Component is required when file is not specified",
+                )
+            })?;
+            let version = entry.version.as_ref().ok_or_else(|| {
+                Error::new(
+                    ErrorKind::InvalidData,
+                    "Version is required when file is not specified",
+                )
+            })?;
+            let xdg_dir = entry.xdg_directory.as_deref().unwrap_or("config");
+
+            let entries = entry.entries.ok_or_else(|| {
+                Error::new(
+                    ErrorKind::InvalidData,
+                    "Entries are required when file is not specified",
+                )
+            })?;
+
+            match (entry.operation, entries) {
                 (Operation::Write, EntryContent::WriteEntries(entries)) => {
                     for (key, value) in entries {
-                        match write_configuration(
-                            &entry.component,
-                            &entry.version,
-                            &key,
-                            &value,
-                            &entry.xdg_directory,
-                        ) {
+                        match write_configuration(component, version, &key, &value, xdg_dir) {
                             Ok(false) => {
                                 if self.verbose {
                                     println!(
                                         "Skipping {}/v{}/{} - value unchanged",
-                                        entry.component, entry.version, key
+                                        component, version, key
                                     );
                                 }
                                 skipped += 1;
@@ -62,7 +139,7 @@ impl Command for ApplyCommand {
                             Err(e) => {
                                 eprintln!(
                                     "Error writing {}/v{}/{}: {}",
-                                    entry.component, entry.version, key, e
+                                    component, version, key, e
                                 );
                                 skipped += 1;
                             }
@@ -71,17 +148,9 @@ impl Command for ApplyCommand {
                 }
                 (Operation::Read, EntryContent::ReadDeleteEntries(keys)) => {
                     for key in keys {
-                        match read_configuration(
-                            &entry.component,
-                            &entry.version,
-                            &key,
-                            &entry.xdg_directory,
-                        ) {
+                        match read_configuration(component, version, &key, xdg_dir) {
                             Ok(content) => {
-                                println!(
-                                    "{}/v{}/{}: {}",
-                                    entry.component, entry.version, key, content
-                                );
+                                println!("{}/v{}/{}: {}", component, version, key, content);
                                 read_count += 1;
                             }
                             Err(e) => {
@@ -95,18 +164,10 @@ impl Command for ApplyCommand {
                 }
                 (Operation::Delete, EntryContent::ReadDeleteEntries(keys)) => {
                     for key in keys {
-                        match delete_configuration(
-                            &entry.component,
-                            &entry.version,
-                            &key,
-                            &entry.xdg_directory,
-                        ) {
+                        match delete_configuration(component, version, &key, xdg_dir) {
                             Ok(()) => {
                                 if self.verbose {
-                                    println!(
-                                        "Deleted: {}/v{}/{}",
-                                        entry.component, entry.version, key
-                                    );
+                                    println!("Deleted: {}/v{}/{}", component, version, key);
                                 }
                                 delete_count += 1;
                             }
@@ -114,7 +175,7 @@ impl Command for ApplyCommand {
                                 if self.verbose {
                                     println!(
                                         "Failed to delete {}/v{}/{}: {}",
-                                        entry.component, entry.version, key, e
+                                        component, version, key, e
                                     );
                                 }
                                 skipped += 1;
@@ -123,7 +184,10 @@ impl Command for ApplyCommand {
                     }
                 }
                 _ => {
-                    return Err(Error::new(ErrorKind::InvalidData, "Invalid operation."));
+                    return Err(Error::new(
+                        ErrorKind::InvalidData,
+                        "Invalid operation configuration.",
+                    ));
                 }
             }
         }

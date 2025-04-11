@@ -14,7 +14,6 @@ pub enum FileFormat {
 }
 
 impl FileFormat {
-    /// Detect file format from extension
     pub fn from_path(path: &Path) -> Result<Self, Error> {
         match path.extension().and_then(|s| s.to_str()) {
             Some(ext) => match ext.to_lowercase().as_str() {
@@ -28,16 +27,6 @@ impl FileFormat {
                 )),
             },
             None => Err(Error::new(ErrorKind::InvalidInput, "File has no extension")),
-        }
-    }
-
-    /// File extension for this format
-    pub fn extension(&self) -> &'static str {
-        match self {
-            FileFormat::Json => "json",
-            FileFormat::Yaml => "yaml",
-            FileFormat::Toml => "toml",
-            FileFormat::Ron => "ron",
         }
     }
 

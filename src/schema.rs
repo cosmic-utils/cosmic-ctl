@@ -27,7 +27,7 @@ pub struct Entry {
 
 #[derive(Deserialize, Serialize)]
 pub struct ConfigFile {
-    #[serde(rename = "$schema")]
-    pub schema: String,
+    #[serde(rename = "$schema", skip_serializing_if = "Option::is_none")]
+    pub schema: Option<String>,
     pub operations: Vec<Entry>,
 }

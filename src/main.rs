@@ -1,5 +1,6 @@
 mod commands;
 mod config;
+mod formats;
 mod schema;
 #[cfg(test)]
 mod tests;

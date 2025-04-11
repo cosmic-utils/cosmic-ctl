@@ -257,7 +257,7 @@ fn test_apply_command_verbose() {
         .assert()
         .success()
         .stdout(
-            "Operations completed successfully. 2 writes, 0 reads, 0 deletes, 0 entries skipped.\n",
+            "Using JSON format for input file\nOperations completed successfully. 2 writes, 0 reads, 0 deletes, 0 entries skipped.\n",
         );
 
     let output = Command::cargo_bin("cosmic-ctl")
@@ -330,7 +330,7 @@ fn test_backup_command() {
         .arg(&backup_file)
         .assert()
         .success()
-        .stdout("Backup completed successfully. 1 total entries backed up.\n");
+        .stdout("Backup completed successfully. 1 total entries backed up in JSON format.\n");
 
     assert!(backup_file.exists());
 
@@ -371,7 +371,7 @@ fn test_backup_command_verbose() {
         .assert()
         .success()
         .stdout(format!(
-            "Backing up [{}]: {}/v{}/{}\nCompleted backup for {} directory: 1 entries\nCompleted backup for {} directory: 0 entries\nBackup completed successfully. 1 total entries backed up.\n",
+            "Using JSON format for output file\nBacking up [{}]: {}/v{}/{}\nCompleted backup for {} directory: 1 entries\nCompleted backup for {} directory: 0 entries\nBackup completed successfully. 1 total entries backed up in JSON format.\n",
             XDG_CONFIG_DIR, COSMIC_COMP, VERSION_1, ENTRY_AUTOTILE, XDG_CONFIG_DIR, XDG_STATE_DIR
         ));
 

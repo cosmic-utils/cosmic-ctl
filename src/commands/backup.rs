@@ -15,7 +15,7 @@ use walkdir::WalkDir;
 
 #[derive(Args)]
 pub struct BackupCommand {
-    /// Path to the output configuration file (supports JSON, YAML, TOML, RON).
+    /// Path to the output configuration file (supports JSON, TOML, RON).
     file: PathBuf,
     /// Show which entries are being backed up.
     #[arg(short, long)]
@@ -35,7 +35,6 @@ impl Command for BackupCommand {
         let file_format = match &self.format {
             Some(fmt) => match fmt.to_lowercase().as_str() {
                 "json" => FileFormat::Json,
-                "yaml" | "yml" => FileFormat::Yaml,
                 "toml" => FileFormat::Toml,
                 "ron" => FileFormat::Ron,
                 _ => {

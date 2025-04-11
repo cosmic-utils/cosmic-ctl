@@ -8,7 +8,6 @@ use std::{
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FileFormat {
     Json,
-    Yaml,
     Toml,
     Ron,
 }
@@ -18,7 +17,6 @@ impl FileFormat {
         match path.extension().and_then(|s| s.to_str()) {
             Some(ext) => match ext.to_lowercase().as_str() {
                 "json" => Ok(FileFormat::Json),
-                "yaml" | "yml" => Ok(FileFormat::Yaml),
                 "toml" => Ok(FileFormat::Toml),
                 "ron" => Ok(FileFormat::Ron),
                 _ => Err(Error::new(
@@ -34,7 +32,6 @@ impl FileFormat {
     pub fn name(&self) -> &'static str {
         match self {
             FileFormat::Json => "JSON",
-            FileFormat::Yaml => "YAML",
             FileFormat::Toml => "TOML",
             FileFormat::Ron => "RON",
         }
@@ -45,9 +42,6 @@ impl FileFormat {
         match self {
             FileFormat::Json => serde_json::from_str(data).map_err(|e| {
                 Error::new(ErrorKind::InvalidData, format!("JSON parsing error: {}", e))
-            }),
-            FileFormat::Yaml => serde_yaml::from_str(data).map_err(|e| {
-                Error::new(ErrorKind::InvalidData, format!("YAML parsing error: {}", e))
             }),
             FileFormat::Toml => toml::from_str(data).map_err(|e| {
                 Error::new(ErrorKind::InvalidData, format!("TOML parsing error: {}", e))
@@ -65,12 +59,6 @@ impl FileFormat {
                 Error::new(
                     ErrorKind::InvalidData,
                     format!("JSON serialization error: {}", e),
-                )
-            }),
-            FileFormat::Yaml => serde_yaml::to_string(value).map_err(|e| {
-                Error::new(
-                    ErrorKind::InvalidData,
-                    format!("YAML serialization error: {}", e),
                 )
             }),
             FileFormat::Toml => toml::to_string_pretty(value).map_err(|e| {

@@ -1117,63 +1117,6 @@ fn test_reset_command_with_exclude_with_brace_expansion_and_wildcard() {
 }
 
 #[test]
-fn test_apply_command_yaml() {
-    let temp_dir = TempDir::new().unwrap();
-    let config_home = temp_dir.path().to_str().unwrap();
-
-    let config_yaml = serde_yaml::to_string(&serde_json::json!({
-        "$schema": "https://raw.githubusercontent.com/cosmic-utils/cosmic-ctl/refs/heads/main/schema.json",
-        "operations": [
-            {
-                "component": COSMIC_COMP,
-                "version": VERSION_1,
-                "operation": WRITE_OPERATION,
-                "xdg_directory": XDG_CONFIG_DIR,
-                "entries": {
-                    ENTRY_AUTOTILE: VALUE_TRUE,
-                    ENTRY_AUTOTILE_BEHAVIOR: VALUE_PER_WORKSPACE
-                }
-            }
-        ]
-    })).unwrap();
-
-    let config_file = temp_dir.path().join("config.yaml");
-    fs::write(&config_file, config_yaml).unwrap();
-
-    Command::cargo_bin("cosmic-ctl")
-        .unwrap()
-        .env("XDG_CONFIG_HOME", config_home)
-        .arg(APPLY_OPERATION)
-        .arg(config_file)
-        .assert()
-        .success()
-        .stdout(
-            "Operations completed successfully. 2 writes, 0 reads, 0 deletes, 0 entries skipped.\n",
-        );
-
-    let autotile_path = temp_dir
-        .path()
-        .join("cosmic")
-        .join(COSMIC_COMP)
-        .join(format!("v{}", VERSION_1))
-        .join(ENTRY_AUTOTILE);
-    let autotile_behavior_path = temp_dir
-        .path()
-        .join("cosmic")
-        .join(COSMIC_COMP)
-        .join(format!("v{}", VERSION_1))
-        .join(ENTRY_AUTOTILE_BEHAVIOR);
-
-    assert!(autotile_path.exists());
-    assert!(autotile_behavior_path.exists());
-    assert_eq!(fs::read_to_string(autotile_path).unwrap(), VALUE_TRUE);
-    assert_eq!(
-        fs::read_to_string(autotile_behavior_path).unwrap(),
-        VALUE_PER_WORKSPACE
-    );
-}
-
-#[test]
 fn test_apply_command_toml() {
     let temp_dir = TempDir::new().unwrap();
     let config_home = temp_dir.path().to_str().unwrap();
@@ -1322,47 +1265,6 @@ fn test_apply_command_ron() {
         fs::read_to_string(autotile_behavior_path).unwrap(),
         VALUE_PER_WORKSPACE
     );
-}
-
-#[test]
-fn test_backup_command_yaml() {
-    let temp_dir = TempDir::new().unwrap();
-    let config_home = temp_dir.path().to_str().unwrap();
-
-    Command::cargo_bin("cosmic-ctl")
-        .unwrap()
-        .env("XDG_CONFIG_HOME", config_home)
-        .args([
-            WRITE_OPERATION,
-            "--version",
-            &VERSION_1.to_string(),
-            "--component",
-            COSMIC_COMP,
-            "--entry",
-            ENTRY_AUTOTILE,
-            VALUE_TRUE,
-        ])
-        .assert()
-        .success();
-
-    let backup_file = temp_dir.path().join("backup.yaml");
-
-    Command::cargo_bin("cosmic-ctl")
-        .unwrap()
-        .env("XDG_CONFIG_HOME", config_home)
-        .arg(BACKUP_OPERATION)
-        .arg(&backup_file)
-        .assert()
-        .success()
-        .stdout("Backup completed successfully. 1 total entries backed up in YAML format.\n");
-
-    assert!(backup_file.exists());
-
-    let backup_content = fs::read_to_string(&backup_file).unwrap();
-    let yaml_data: serde_yaml::Value = serde_yaml::from_str(&backup_content).unwrap();
-
-    assert!(yaml_data.get("operations").is_some());
-    assert!(yaml_data.get("$schema").is_some());
 }
 
 #[test]

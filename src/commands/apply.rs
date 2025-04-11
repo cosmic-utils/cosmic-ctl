@@ -16,7 +16,7 @@ use std::{
 
 #[derive(Args)]
 pub struct ApplyCommand {
-    /// Path to the configuration file (supports JSON, YAML, TOML, RON).
+    /// Path to the configuration file (supports JSON, TOML, RON).
     file: PathBuf,
     /// Print verbose output about skipped entries.
     #[arg(short, long)]

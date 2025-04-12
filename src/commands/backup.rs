@@ -16,16 +16,16 @@ use walkdir::WalkDir;
 #[derive(Args)]
 pub struct BackupCommand {
     /// Path to the output configuration file (supports JSON, TOML, RON).
-    file: PathBuf,
+    pub file: PathBuf,
     /// Show which entries are being backed up.
     #[arg(short, long)]
-    verbose: bool,
+    pub verbose: bool,
     /// The XDG directories to backup (comma-separated) (e.g., 'config,cache,data').
     #[arg(short, long, value_delimiter = ',', default_value = "config,state")]
-    xdg_dirs: Vec<String>,
+    pub xdg_dirs: Vec<String>,
     /// Output format (auto-detected from file extension if not specified).
     #[arg(short, long)]
-    format: Option<String>,
+    pub format: Option<String>,
 }
 
 impl Command for BackupCommand {

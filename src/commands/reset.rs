@@ -13,16 +13,16 @@ use walkdir::WalkDir;
 pub struct ResetCommand {
     /// Skip confirmation prompt.
     #[arg(short, long)]
-    force: bool,
+    pub force: bool,
     /// Show which entries are being deleted.
     #[arg(short, long)]
-    verbose: bool,
+    pub verbose: bool,
     /// Patterns to exclude from reset (comma-separated).
     #[arg(long)]
-    exclude: Option<String>,
+    pub exclude: Option<String>,
     /// The XDG directories to backup (comma-separated) (e.g., 'config,cache,data').
     #[arg(short, long, value_delimiter = ',', default_value = "config,state")]
-    xdg_dirs: Vec<String>,
+    pub xdg_dirs: Vec<String>,
 }
 
 impl Command for ResetCommand {

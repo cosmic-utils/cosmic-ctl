@@ -1,12 +1,13 @@
 mod commands;
 mod config;
 mod formats;
+mod interactive;
 mod schema;
 #[cfg(test)]
 mod tests;
 mod utils;
 
-use crate::commands::Commands;
+use crate::{commands::Commands, interactive::run_interactive_mode};
 use clap::Parser;
 
 /// CLI for COSMIC Desktop configuration management
@@ -15,13 +16,18 @@ use clap::Parser;
 #[command(propagate_version = true)]
 struct Cli {
     #[command(subcommand)]
-    command: Commands,
+    command: Option<Commands>,
 }
 
 fn main() {
     let cli = Cli::parse();
 
-    if let Err(e) = cli.command.execute() {
+    let result = match cli.command {
+        Some(cmd) => cmd.execute(),
+        None => run_interactive_mode(),
+    };
+
+    if let Err(e) = result {
         eprintln!("Error: {}", e);
         std::process::exit(1);
     }

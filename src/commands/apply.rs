@@ -17,10 +17,10 @@ use std::{
 #[derive(Args)]
 pub struct ApplyCommand {
     /// Path to the configuration file (supports JSON, TOML, RON).
-    file: PathBuf,
+    pub file: PathBuf,
     /// Print verbose output about skipped entries.
     #[arg(short, long)]
-    verbose: bool,
+    pub verbose: bool,
 }
 
 impl Command for ApplyCommand {

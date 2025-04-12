@@ -1,9 +1,9 @@
-mod apply;
-mod backup;
-mod delete;
-mod read;
-mod reset;
-mod write;
+pub mod apply;
+pub mod backup;
+pub mod delete;
+pub mod read;
+pub mod reset;
+pub mod write;
 
 use crate::commands::{
     apply::ApplyCommand, backup::BackupCommand, delete::DeleteCommand, read::ReadCommand,

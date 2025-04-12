@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/cosmic-utils/cosmic-ctl/compare/v1.3.0...v1.4.0) (2025-04-12)
+
+
+### Features
+
+* **cli:** add interactive mode using inquire ([#9](https://github.com/cosmic-utils/cosmic-ctl/issues/9)) ([f1602db](https://github.com/cosmic-utils/cosmic-ctl/commit/f1602db8ea5dcca78ef719577a17c44f3aeb9eae))
+
 ## [1.3.0](https://github.com/cosmic-utils/cosmic-ctl/compare/v1.2.0...v1.3.0) (2025-04-11)
 
 

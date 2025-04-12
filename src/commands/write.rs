@@ -9,21 +9,21 @@ use std::{io::Error, path::PathBuf};
 pub struct WriteCommand {
     /// The configuration version of the component.
     #[arg(short, long, default_value_t = 1)]
-    version: u64,
+    pub version: u64,
     /// The component to configure (e.g., 'com.system76.CosmicComp').
     #[arg(short, long, required_unless_present = "file")]
-    component: Option<String>,
+    pub component: Option<String>,
     /// The specific configuration entry to modify (e.g., 'autotile').
     #[arg(short, long, required_unless_present = "file")]
-    entry: Option<String>,
+    pub entry: Option<String>,
     /// The value to assign to the configuration entry. (e.g., 'true').
-    value: String,
+    pub value: String,
     /// The XDG directory to use (e.g., 'config', 'cache', 'data').
     #[arg(short, long, default_value = "config")]
-    xdg_dir: String,
+    pub xdg_dir: String,
     /// Direct path to the configuration file.
     #[arg(long, required_unless_present_all = &["component", "entry"])]
-    file: Option<PathBuf>,
+    pub file: Option<PathBuf>,
 }
 
 impl Command for WriteCommand {

@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/cosmic-utils/cosmic-ctl/compare/v1.4.0...v1.5.0) (2025-05-02)
+
+
+### Features
+
+* add build-theme command ([#11](https://github.com/cosmic-utils/cosmic-ctl/issues/11)) ([b8fbc4e](https://github.com/cosmic-utils/cosmic-ctl/commit/b8fbc4eeb34f57f9127cde9c8f83225713842159))
+
 ## [1.4.0](https://github.com/cosmic-utils/cosmic-ctl/compare/v1.3.0...v1.4.0) (2025-04-12)
 
 

@@ -1,13 +1,14 @@
 pub mod apply;
 pub mod backup;
+pub mod build_theme;
 pub mod delete;
 pub mod read;
 pub mod reset;
 pub mod write;
 
 use crate::commands::{
-    apply::ApplyCommand, backup::BackupCommand, delete::DeleteCommand, read::ReadCommand,
-    reset::ResetCommand, write::WriteCommand,
+    apply::ApplyCommand, backup::BackupCommand, build_theme::BuildThemeCommand,
+    delete::DeleteCommand, read::ReadCommand, reset::ResetCommand, write::WriteCommand,
 };
 use clap::Subcommand;
 use std::io::Error;
@@ -18,6 +19,8 @@ pub enum Commands {
     Apply(ApplyCommand),
     /// Backup all configuration entries to a JSON file.
     Backup(BackupCommand),
+    /// Manually build light and dark themes using builder settings.
+    BuildTheme(BuildThemeCommand),
     /// Delete a configuration entry.
     #[command(disable_version_flag = true)]
     Delete(DeleteCommand),
@@ -36,6 +39,7 @@ impl Commands {
         match self {
             Commands::Apply(cmd) => cmd.execute(),
             Commands::Backup(cmd) => cmd.execute(),
+            Commands::BuildTheme(cmd) => cmd.execute(),
             Commands::Delete(cmd) => cmd.execute(),
             Commands::Read(cmd) => cmd.execute(),
             Commands::Reset(cmd) => cmd.execute(),

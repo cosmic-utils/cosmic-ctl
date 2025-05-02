@@ -27,6 +27,10 @@ toml = "0.8.20"
 unescaper = "0.1.5"
 walkdir = "2.5.0"
 
+[dependencies.libcosmic]
+default-features = false
+git = "https://github.com/pop-os/libcosmic.git"
+
 [dev-dependencies]
 assert_cmd = "2.0.16"
 tempfile = "3.14.0"

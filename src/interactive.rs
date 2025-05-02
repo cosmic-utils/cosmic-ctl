@@ -1,6 +1,6 @@
 use crate::commands::{
-    apply::ApplyCommand, backup::BackupCommand, delete::DeleteCommand, read::ReadCommand,
-    reset::ResetCommand, write::WriteCommand, Command,
+    apply::ApplyCommand, backup::BackupCommand, build_theme::BuildThemeCommand,
+    delete::DeleteCommand, read::ReadCommand, reset::ResetCommand, write::WriteCommand, Command,
 };
 use inquire::{MultiSelect, Select, Text};
 use std::{
@@ -13,7 +13,15 @@ const XDG_DIRECTORIES: [&str; 5] = ["cache", "config", "data", "runtime", "state
 pub fn run_interactive_mode() -> Result<(), Error> {
     let operation = Select::new(
         "What would you like to do?",
-        vec!["Write", "Read", "Delete", "Apply", "Backup", "Reset"],
+        vec![
+            "Write",
+            "Read",
+            "Delete",
+            "Apply",
+            "Backup",
+            "Reset",
+            "Build Theme",
+        ],
     )
     .prompt()
     .map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
@@ -25,6 +33,7 @@ pub fn run_interactive_mode() -> Result<(), Error> {
         "Apply" => interactive_apply()?,
         "Backup" => interactive_backup()?,
         "Reset" => interactive_reset()?,
+        "Build Theme" => interactive_build_theme()?,
         _ => unreachable!(),
     }
 
@@ -302,5 +311,10 @@ fn interactive_reset() -> Result<(), Error> {
         xdg_dirs,
     };
 
+    cmd.execute()
+}
+
+fn interactive_build_theme() -> Result<(), Error> {
+    let cmd = BuildThemeCommand {};
     cmd.execute()
 }

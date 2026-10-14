@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/cosmic-utils/cosmic-ctl/compare/v1.5.0...v1.6.0) (2026-10-14)
+
+
+### Features
+
+* improve nix stuff ([a269acd](https://github.com/cosmic-utils/cosmic-ctl/commit/a269acd232cc980ab8cea06d27d83ea2fde3bdab))
+
 ## [1.5.0](https://github.com/cosmic-utils/cosmic-ctl/compare/v1.4.0...v1.5.0) (2025-05-02)
 
 
